@@ -1,0 +1,21 @@
+
+test1.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010074 <_start>:
+   10074:	06400293          	li	t0,100
+   10078:	00200313          	li	t1,2
+   1007c:	0062a023          	sw	t1,0(t0)
+   10080:	06800293          	li	t0,104
+   10084:	00500313          	li	t1,5
+   10088:	0062a023          	sw	t1,0(t0)
+   1008c:	06400293          	li	t0,100
+   10090:	0002a303          	lw	t1,0(t0)
+   10094:	06800293          	li	t0,104
+   10098:	0002a383          	lw	t2,0(t0)
+   1009c:	00730e33          	add	t3,t1,t2
+   100a0:	06c00293          	li	t0,108
+   100a4:	01c2a023          	sw	t3,0(t0)
+   100a8:	fcdff06f          	j	10074 <_start>
