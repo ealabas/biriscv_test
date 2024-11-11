@@ -44,6 +44,8 @@
 `define INST_VADD_VV 32'h57 // Opcode for vadd.vv
 `define INST_VADD_VV_MASK 32'hfc00707f // Mask to isolate the instruction's opcode, func7 and funct3
 
+// load store will be added here
+
 // andi
 `define INST_ANDI 32'h7013
 `define INST_ANDI_MASK 32'h707f
