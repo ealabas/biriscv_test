@@ -31,6 +31,7 @@ module biriscv_frontend
      parameter SUPPORT_BRANCH_PREDICTION = 1
     ,parameter SUPPORT_MULDIV   = 1
     ,parameter SUPPORT_MMU      = 1
+    ,parameter SUPPORT_VECTOR_EXT = 1
     ,parameter EXTRA_DECODE_STAGE = 0
     ,parameter NUM_BTB_ENTRIES  = 32
     ,parameter NUM_BTB_ENTRIES_W = 5
@@ -156,6 +157,7 @@ biriscv_decode
 #(
      .EXTRA_DECODE_STAGE(EXTRA_DECODE_STAGE)
     ,.SUPPORT_MULDIV(SUPPORT_MULDIV)
+    ,.SUPPORT_VECTOR_EXT(SUPPORT_VECTOR_EXT)
 )
 u_decode
 (
