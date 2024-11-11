@@ -50,83 +50,83 @@
 
 // vl1re8.v
 // loads to the 1 vector register, each element is 8 bits.
-`define INST_VL1RE8_V 32'h00000007 // Opcode for vl1re8.v
-`define INST_VL1RE8_V_MASK 32'hfc00707f // Mask for func3, func7, and opcode
+`define INST_VL1RE8_V 32'h02800007 // Opcode for vl1re8.v
+`define INST_VL1RE8_V_MASK 32'hfff0707f // Mask for func3, func7, and opcode
 
 // vl1re16.v
 // loads to the 1 vector register, each element is 16 bits.
-`define INST_VL1RE16_V 32'h00005007 
-`define INST_VL1RE16_V_MASK 32'hfc00707f
+`define INST_VL1RE16_V 32'h02805007 
+`define INST_VL1RE16_V_MASK 32'hfff0707f
 
 // vl1re32.v
 // loads to the 1 vector register, each element is 32 bits.
-`define INST_VL1RE32_V 32'h00006007
-`define INST_VL1RE32_V_MASK 32'hfc00707f
+`define INST_VL1RE32_V 32'h02806007
+`define INST_VL1RE32_V_MASK 32'hfff0707f
 
 // vl1re64.v
 // loads to the 1 vector register, each element is 64 bits.
-`define INST_VL1RE64_V 32'h00007007
-`define INST_VL1RE64_V_MASK 32'hfc00707f
+`define INST_VL1RE64_V 32'h02807007
+`define INST_VL1RE64_V_MASK 32'hfff0707f
 
 // vl2re8.v
 // loads to the 2 vector registers, each element is 8 bits.
-`define INST_VL2RE8_V 32'h20000007
-`define INST_VL2RE8_V_MASK 32'hfc00707f
+`define INST_VL2RE8_V 32'h22800007
+`define INST_VL2RE8_V_MASK 32'hfff0707f
 
 // vl2re16.v
 // loads to the 2 vector registers, each element is 16 bits.
-`define INST_VL2RE16_V 32'h20005007
-`define INST_VL2RE16_V_MASK 32'hfc00707f
+`define INST_VL2RE16_V 32'h22805007
+`define INST_VL2RE16_V_MASK 32'hfff0707f
 
 // vl2re32.v
 // loads to the 2 vector registers, each element is 32 bits.
-`define INST_VL2RE32_V 32'h20006007
-`define INST_VL2RE32_V_MASK 32'hfc00707f
+`define INST_VL2RE32_V 32'h22806007
+`define INST_VL2RE32_V_MASK 32'hfff0707f
 
 // vl2re64.v
 // loads to the 2 vector registers, each element is 64 bits.
-`define INST_VL2RE64_V 32'h20005007
-`define INST_VL2RE64_V_MASK 32'hfc00707f
+`define INST_VL2RE64_V 32'h22805007
+`define INST_VL2RE64_V_MASK 32'hfff0707f
 
 // vl4re8.v
 // loads to the 4 vector registers, each element is 8 bits.
-`define INST_VL4RE8_V 32'h60000007
-`define INST_VL4RE8_V_MASK 32'hfc00707f
+`define INST_VL4RE8_V 32'h62800007
+`define INST_VL4RE8_V_MASK 32'hfff0707f
 
 // vl4re16.v
 // loads to the 4 vector registers, each element is 16 bits.
-`define INST_VL4RE16_V 32'h60005007
-`define INST_VL4RE16_V_MASK 32'hfc00707f
+`define INST_VL4RE16_V 32'h62805007
+`define INST_VL4RE16_V_MASK 32'hfff0707f
 
 // vl4re32.v
 // loads to the 4 vector registers, each element is 32 bits.
-`define INST_VL4RE32_V 32'h60006007
-`define INST_VL4RE32_V_MASK 32'hfc00707f
+`define INST_VL4RE32_V 32'h62806007
+`define INST_VL4RE32_V_MASK 32'hfff0707f
 
 // vl4re64.v
 // loads to the 4 vector registers, each element is 64 bits.
-`define INST_VL4RE64_V 32'h60007007
-`define INST_VL4RE64_V_MASK 32'hfc00707f
+`define INST_VL4RE64_V 32'h62807007
+`define INST_VL4RE64_V_MASK 32'hfff0707f
 
 // vl8re8.v
 // loads to the 8 vector registers, each element is 8 bits.
-`define INST_VL8RE8_V 32'hE0000007
-`define INST_VL8RE8_V_MASK 32'hfc00707f
+`define INST_VL8RE8_V 32'hE2800007
+`define INST_VL8RE8_V_MASK 32'hfff0707f
 
 // vl8re16.v
 // loads to the 8 vector registers, each element is 16 bits.
-`define INST_VL8RE16_V 32'hE0005007
-`define INST_VL8RE16_V_MASK 32'hfc00707f
+`define INST_VL8RE16_V 32'hE2805007
+`define INST_VL8RE16_V_MASK 32'hfff0707f
 
 // vl8re32.v
 // loads to the 8 vector registers, each element is 32 bits.
-`define INST_VL8RE32_V 32'hE0006007
-`define INST_VL8RE32_V_MASK 32'hfc00707f
+`define INST_VL8RE32_V 32'hE2806007
+`define INST_VL8RE32_V_MASK 32'hfff0707f
 
 // vl8re64.v
 // loads to the 8 vector registers, each element is 64 bits.
-`define INST_VL8RE64_V 32'hE0007007
-`define INST_VL8RE64_V_MASK 32'hfc00707f
+`define INST_VL8RE64_V 32'hE2807007
+`define INST_VL8RE64_V_MASK 32'hfff0707f
 
 // store vector instructions
 
