@@ -64,6 +64,7 @@ module biriscv_decode
     ,output          fetch_out0_instr_mul_o
     ,output          fetch_out0_instr_div_o
     ,output          fetch_out0_instr_csr_o
+    ,output          fetch_out0_instr_vector_o //new
     ,output          fetch_out0_instr_rd_valid_o
     ,output          fetch_out0_instr_invalid_o
     ,output          fetch_out1_valid_o
@@ -77,10 +78,9 @@ module biriscv_decode
     ,output          fetch_out1_instr_mul_o
     ,output          fetch_out1_instr_div_o
     ,output          fetch_out1_instr_csr_o
+    ,output          fetch_out1_instr_vector_o //new
     ,output          fetch_out1_instr_rd_valid_o
     ,output          fetch_out1_instr_invalid_o
-    ,output          fetch_out1_vector_csr_o //new
-    ,output          fetch_out0_vector_csr_o //new
 );
 
 
@@ -192,7 +192,7 @@ begin
                        fetch_out0_instr_mul_o,     fetch_out0_instr_div_o,
                        fetch_out0_instr_csr_o,     fetch_out0_instr_rd_valid_o,
                        fetch_out0_fault_page_o,    fetch_out0_fault_fetch_o,
-                       fetch_out0_vector_csr_o})
+                       fetch_out0_instr_vector_o})
         ,.pop0_i(fetch_out0_accept_i)
 
         ,.valid1_o(fetch_out1_valid_o)
@@ -203,7 +203,7 @@ begin
                        fetch_out1_instr_mul_o,     fetch_out1_instr_div_o,
                        fetch_out1_instr_csr_o,     fetch_out1_instr_rd_valid_o,
                        fetch_out1_fault_page_o,    fetch_out1_fault_fetch_o,
-                       fetch_out1_vector_csr_o})
+                       fetch_out1_instr_vector_o})
         ,.pop1_i(fetch_out1_accept_i)
     );
 end
@@ -261,7 +261,7 @@ begin
         ,.div_o(fetch_out0_instr_div_o)
         ,.csr_o(fetch_out0_instr_csr_o)
         ,.rd_valid_o(fetch_out0_instr_rd_valid_o)
-        ,.is_vector_o(fetch_out0_vector_csr_o)
+        ,.is_vector_o(fetch_out0_instr_vector_o)
     );
 
     biriscv_decoder
@@ -281,7 +281,7 @@ begin
         ,.div_o(fetch_out1_instr_div_o)
         ,.csr_o(fetch_out1_instr_csr_o)
         ,.rd_valid_o(fetch_out1_instr_rd_valid_o)
-        ,.is_vector_o(fetch_out1_vector_csr_o)
+        ,.is_vector_o(fetch_out1_instr_vector_o)
     );
 end
 endgenerate
