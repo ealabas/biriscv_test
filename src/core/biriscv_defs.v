@@ -132,23 +132,23 @@
 
 // vs1r.v
 // stores 1 vector register to the memory.
-`define INST_VS1R_V 32'h00005027 // Opcode for vs1r.v
-`define INST_VS1R_V_MASK 32'hfc00707f // Mask for func3, func7, and opcode
+`define INST_VS1R_V 32'h02800027 // Opcode for vs1r.v
+`define INST_VS1R_V_MASK 32'hfff0707f // Mask for func3, func7, and opcode
 
 // vs2r.v
 // stores 2 vector registers to the memory.
-`define INST_VS2R_V 32'h20005027
-`define INST_VS2R_V_MASK 32'hfc00707f
+`define INST_VS2R_V 32'h22800027
+`define INST_VS2R_V_MASK 32'hfff0707f
 
 // vs4r.v
 // stores 4 vector registers to the memory.
-`define INST_VS4R_V 32'h60005027
-`define INST_VS4R_V_MASK 32'hfc00707f
+`define INST_VS4R_V 32'h62800027
+`define INST_VS4R_V_MASK 32'hfff0707f
 
 // vs8r.v
 // stores 8 vector registers to the memory.
-`define INST_VS8R_V 32'h70005027
-`define INST_VS8R_V_MASK 32'hfc00707f
+`define INST_VS8R_V 32'hE2800027
+`define INST_VS8R_V_MASK 32'hfff0707f
 
 // andi
 `define INST_ANDI 32'h7013
