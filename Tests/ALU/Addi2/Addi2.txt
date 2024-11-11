@@ -1,0 +1,9 @@
+
+Addi2.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010074 <_start>:
+   10074:	00500293          	li	t0,5
+   10078:	00528333          	add	t1,t0,t0

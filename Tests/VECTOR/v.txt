@@ -1,0 +1,8 @@
+
+v.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010074 <_start>:
+   10074:	02110057          	vadd.vv	v0,v1,v2
