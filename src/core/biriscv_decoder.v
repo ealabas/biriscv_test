@@ -250,6 +250,14 @@ assign lsu_v_o =    enable_vector_extension_i &&
                     ((opcode_i & `INST_VL2RE16_V_MASK) == `INST_VL2RE16_V) ||
                     ((opcode_i & `INST_VL2RE32_V_MASK) == `INST_VL2RE32_V) ||
                     ((opcode_i & `INST_VL2RE64_V_MASK) == `INST_VL2RE64_V) ||
+                    ((opcode_i & `INST_VL4RE8_V_MASK) == `INST_VL4RE8_V)   ||
+                    ((opcode_i & `INST_VL4RE16_V_MASK) == `INST_VL4RE16_V) ||
+                    ((opcode_i & `INST_VL4RE32_V_MASK) == `INST_VL4RE32_V) ||
+                    ((opcode_i & `INST_VL4RE64_V_MASK) == `INST_VL4RE64_V) ||
+                    ((opcode_i & `INST_VL8RE8_V_MASK) == `INST_VL8RE8_V)   ||
+                    ((opcode_i & `INST_VL8RE16_V_MASK) == `INST_VL8RE16_V) ||
+                    ((opcode_i & `INST_VL8RE32_V_MASK) == `INST_VL8RE32_V) ||
+                    ((opcode_i & `INST_VL8RE64_V_MASK) == `INST_VL8RE64_V) ||
                     ((opcode_i & `INST_VS1R_V_MASK) == `INST_VS1R_V)       ||
                     ((opcode_i & `INST_VS2R_V_MASK) == `INST_VS2R_V)       ||
                     ((opcode_i & `INST_VS4R_V_MASK) == `INST_VS4R_V)       ||

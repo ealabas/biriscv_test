@@ -85,7 +85,7 @@
 
 // vl2re64.v
 // loads to the 2 vector registers, each element is 64 bits.
-`define INST_VL2RE64_V 32'h22805007
+`define INST_VL2RE64_V 32'h22807007
 `define INST_VL2RE64_V_MASK 32'hfff0707f
 
 // vl4re8.v
