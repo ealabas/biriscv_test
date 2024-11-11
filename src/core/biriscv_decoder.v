@@ -40,11 +40,8 @@ module biriscv_decoder
     ,output                       div_o
     ,output                       csr_o
     ,output                       rd_valid_o
-    ,output                       is_vector_o //new
+    ,output                       lsu_v_o //new
 );
-
-wire is_vector_w = (enable_vector_extension_i && (opcode_i & `INST_VADD_VV_MASK) == `INST_VADD_VV); //new
-assign is_vector_o = is_vector_w; //new
 
 // Invalid instruction
 wire invalid_w =    valid_i && 
@@ -107,7 +104,27 @@ wire invalid_w =    valid_i &&
                     (enable_muldiv_i && (opcode_i & `INST_DIVU_MASK) == `INST_DIVU)     ||
                     (enable_muldiv_i && (opcode_i & `INST_REM_MASK) == `INST_REM)       ||
                     (enable_muldiv_i && (opcode_i & `INST_REMU_MASK) == `INST_REMU)     ||
-                    (is_vector_w)); //new
+                    (enable_vector_extension_i && (opcode_i & `INST_VL1RE8_V_MASK) == `INST_VL1RE8_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL1RE16_V_MASK) == `INST_VL1RE16_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL1RE32_V_MASK) == `INST_VL1RE32_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL1RE64_V_MASK) == `INST_VL1RE64_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL2RE8_V_MASK) == `INST_VL2RE8_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL2RE16_V_MASK) == `INST_VL2RE16_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL2RE32_V_MASK) == `INST_VL2RE32_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL2RE64_V_MASK) == `INST_VL2RE64_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL4RE8_V_MASK) == `INST_VL4RE8_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL4RE16_V_MASK) == `INST_VL4RE16_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL4RE32_V_MASK) == `INST_VL4RE32_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL4RE64_V_MASK) == `INST_VL4RE64_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL8RE8_V_MASK) == `INST_VL8RE8_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL8RE16_V_MASK) == `INST_VL8RE16_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL8RE32_V_MASK) == `INST_VL8RE32_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VL8RE64_V_MASK) == `INST_VL8RE64_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VS1R_V_MASK) == `INST_VS1R_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VS2R_V_MASK) == `INST_VS2R_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VS4R_V_MASK) == `INST_VS4R_V)     ||
+                    (enable_vector_extension_i && (opcode_i & `INST_VS8R_V_MASK) == `INST_VS8R_V)
+                    );
 
 assign invalid_o = invalid_w;
 
@@ -222,5 +239,28 @@ assign csr_o =      ((opcode_i & `INST_ECALL_MASK) == `INST_ECALL)            ||
                     ((opcode_i & `INST_IFENCE_MASK) == `INST_IFENCE)          ||
                     ((opcode_i & `INST_SFENCE_MASK) == `INST_SFENCE)          ||
                     invalid_w || fetch_fault_i;
+
+// Define the `lsu_v_o` flag for vector load/store operations
+assign lsu_v_o =    enable_vector_extension_i && 
+                    (((opcode_i & `INST_VL1RE8_V_MASK) == `INST_VL1RE8_V)   ||
+                    ((opcode_i & `INST_VL1RE16_V_MASK) == `INST_VL1RE16_V) ||
+                    ((opcode_i & `INST_VL1RE32_V_MASK) == `INST_VL1RE32_V) ||
+                    ((opcode_i & `INST_VL1RE64_V_MASK) == `INST_VL1RE64_V) ||
+                    ((opcode_i & `INST_VL2RE8_V_MASK) == `INST_VL2RE8_V)   ||
+                    ((opcode_i & `INST_VL2RE16_V_MASK) == `INST_VL2RE16_V) ||
+                    ((opcode_i & `INST_VL2RE32_V_MASK) == `INST_VL2RE32_V) ||
+                    ((opcode_i & `INST_VL2RE64_V_MASK) == `INST_VL2RE64_V) ||
+                    ((opcode_i & `INST_VL4RE8_V_MASK) == `INST_VL4RE8_V)   ||
+                    ((opcode_i & `INST_VL4RE16_V_MASK) == `INST_VL4RE16_V) ||
+                    ((opcode_i & `INST_VL4RE32_V_MASK) == `INST_VL4RE32_V) ||
+                    ((opcode_i & `INST_VL4RE64_V_MASK) == `INST_VL4RE64_V) ||
+                    ((opcode_i & `INST_VL8RE8_V_MASK) == `INST_VL8RE8_V)   ||
+                    ((opcode_i & `INST_VL8RE16_V_MASK) == `INST_VL8RE16_V) ||
+                    ((opcode_i & `INST_VL8RE32_V_MASK) == `INST_VL8RE32_V) ||
+                    ((opcode_i & `INST_VL8RE64_V_MASK) == `INST_VL8RE64_V) ||
+                    ((opcode_i & `INST_VS1R_V_MASK) == `INST_VS1R_V)       ||
+                    ((opcode_i & `INST_VS2R_V_MASK) == `INST_VS2R_V)       ||
+                    ((opcode_i & `INST_VS4R_V_MASK) == `INST_VS4R_V)       ||
+                    ((opcode_i & `INST_VS8R_V_MASK) == `INST_VS8R_V));
 
 endmodule
