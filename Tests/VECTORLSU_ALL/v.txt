@@ -1,0 +1,27 @@
+
+v.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010074 <_start>:
+   10074:	02828087          	vl1r.v	v1,(t0)
+   10078:	0282d087          	vl1re16.v	v1,(t0)
+   1007c:	0282e087          	vl1re32.v	v1,(t0)
+   10080:	0282f087          	vl1re64.v	v1,(t0)
+   10084:	22828087          	vl2r.v	v1,(t0)
+   10088:	2282d087          	vl2re16.v	v1,(t0)
+   1008c:	2282e087          	vl2re32.v	v1,(t0)
+   10090:	2282f087          	vl2re64.v	v1,(t0)
+   10094:	62828087          	vl4r.v	v1,(t0)
+   10098:	6282d087          	vl4re16.v	v1,(t0)
+   1009c:	6282e087          	vl4re32.v	v1,(t0)
+   100a0:	6282f087          	vl4re64.v	v1,(t0)
+   100a4:	e2828087          	vl8r.v	v1,(t0)
+   100a8:	e282d087          	vl8re16.v	v1,(t0)
+   100ac:	e282e087          	vl8re32.v	v1,(t0)
+   100b0:	e282f087          	vl8re64.v	v1,(t0)
+   100b4:	028280a7          	vs1r.v	v1,(t0)
+   100b8:	228280a7          	vs2r.v	v1,(t0)
+   100bc:	628280a7          	vs4r.v	v1,(t0)
+   100c0:	e28280a7          	vs8r.v	v1,(t0)
