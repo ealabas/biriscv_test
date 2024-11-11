@@ -36,6 +36,7 @@ module riscv_core
     ,parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS = 1
     ,parameter SUPPORT_REGFILE_XILINX = 0
+    ,parameter SUPPORT_VECTOR_EXT = 1
     ,parameter EXTRA_DECODE_STAGE = 0
     ,parameter MEM_CACHE_ADDR_MIN = 32'h80000000
     ,parameter MEM_CACHE_ADDR_MAX = 32'h8fffffff
@@ -251,6 +252,8 @@ wire  [  4:0]  lsu_opcode_ra_idx_w;
 wire  [ 31:0]  csr_writeback_exception_pc_w;
 wire           fetch1_instr_mul_w;
 wire           mmu_store_fault_w;
+wire           fetch1_instr_lsu_v_w;
+wire           fetch0_instr_lsu_v_w;
 
 
 biriscv_frontend
@@ -268,6 +271,7 @@ biriscv_frontend
     ,.NUM_BHT_ENTRIES(NUM_BHT_ENTRIES)
     ,.RAS_ENABLE(RAS_ENABLE)
     ,.NUM_RAS_ENTRIES(NUM_RAS_ENTRIES)
+    ,.SUPPORT_VECTOR_EXT(SUPPORT_VECTOR_EXT)
 )
 u_frontend
 (
@@ -313,6 +317,7 @@ u_frontend
     ,.fetch0_instr_csr_o(fetch0_instr_csr_w)
     ,.fetch0_instr_rd_valid_o(fetch0_instr_rd_valid_w)
     ,.fetch0_instr_invalid_o(fetch0_instr_invalid_w)
+    ,.fetch0_instr_lsu_v_o(fetch0_instr_lsu_v_w)
     ,.fetch1_valid_o(fetch1_valid_w)
     ,.fetch1_instr_o(fetch1_instr_w)
     ,.fetch1_pc_o(fetch1_pc_w)
@@ -326,6 +331,7 @@ u_frontend
     ,.fetch1_instr_csr_o(fetch1_instr_csr_w)
     ,.fetch1_instr_rd_valid_o(fetch1_instr_rd_valid_w)
     ,.fetch1_instr_invalid_o(fetch1_instr_invalid_w)
+    ,.fetch1_instr_lsu_v_o(fetch1_instr_lsu_v_w)
 );
 
 

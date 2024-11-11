@@ -89,6 +89,7 @@ module biriscv_frontend
     ,output          fetch0_instr_csr_o
     ,output          fetch0_instr_rd_valid_o
     ,output          fetch0_instr_invalid_o
+    ,output          fetch0_instr_lsu_v_o //new
     ,output          fetch1_valid_o
     ,output [ 31:0]  fetch1_instr_o
     ,output [ 31:0]  fetch1_pc_o
@@ -102,6 +103,7 @@ module biriscv_frontend
     ,output          fetch1_instr_csr_o
     ,output          fetch1_instr_rd_valid_o
     ,output          fetch1_instr_invalid_o
+    ,output          fetch1_instr_lsu_v_o //new
 );
 
 wire           fetch_valid_w;
@@ -191,6 +193,7 @@ u_decode
     ,.fetch_out0_instr_csr_o(fetch0_instr_csr_o)
     ,.fetch_out0_instr_rd_valid_o(fetch0_instr_rd_valid_o)
     ,.fetch_out0_instr_invalid_o(fetch0_instr_invalid_o)
+    ,.fetch_out0_instr_lsu_v_o(fetch0_instr_lsu_v_o) //new
     ,.fetch_out1_valid_o(fetch1_valid_o)
     ,.fetch_out1_instr_o(fetch1_instr_o)
     ,.fetch_out1_pc_o(fetch1_pc_o)
@@ -204,6 +207,7 @@ u_decode
     ,.fetch_out1_instr_csr_o(fetch1_instr_csr_o)
     ,.fetch_out1_instr_rd_valid_o(fetch1_instr_rd_valid_o)
     ,.fetch_out1_instr_invalid_o(fetch1_instr_invalid_o)
+    ,.fetch_out1_instr_lsu_v_o(fetch1_instr_lsu_v_o) //new
 );
 
 
