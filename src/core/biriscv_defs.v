@@ -38,6 +38,19 @@
 `define ALU_LESS_THAN_SIGNED                    4'b1011
 
 //--------------------------------------------------------------------
+// VECTOR ALU Operations
+//--------------------------------------------------------------------
+`define ALU_VRSUBVXI                            4'b0000
+`define ALU_VADDVV                              4'b0001
+`define ALU_VADDVXI                             4'b0010
+`define ALU_VSUBVV                              4'b0011
+`define ALU_VSUBVX                              4'b0100
+`define ALU_VMINUVV                             4'b0101
+`define ALU_VMINUVX                             4'b0110
+`define ALU_VMAXUVV                             4'b0111
+`define ALU_VMAXUVX                             4'b1000
+
+//--------------------------------------------------------------------
 // Instructions Masks
 //--------------------------------------------------------------------
 
