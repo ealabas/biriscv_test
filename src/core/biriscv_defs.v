@@ -54,10 +54,51 @@
 // Instructions Masks
 //--------------------------------------------------------------------
 
-// added just for testing new opcode detecting
+// alu vector instructions
+
 // vadd.vv
 `define INST_VADD_VV 32'h57 // Opcode for vadd.vv
 `define INST_VADD_VV_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vadd.vx
+`define INST_VADD_VX 32'h4057 // Opcode for vadd.vx
+`define INST_VADD_VX_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vadd.vi
+`define INST_VADD_VI 32'h3057 // Opcode for vadd.vi
+`define INST_VADD_VI_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vsub.vv
+`define INST_VSUB_VV 32'h8000057 // Opcode for vsub.vv
+`define INST_VSUB_VV_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vsub.vx
+`define INST_VSUB_VX 32'h8004057 // Opcode for vsub.vx
+`define INST_VSUB_VX_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vrsub.vx
+`define INST_VRSUB_VX 32'hc004057 // Opcode for vrsub.vx
+`define INST_VRSUB_VX_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vrsub.vi
+`define INST_VRSUB_VI 32'hc003057 // Opcode for vrsub.vi
+`define INST_VRSUB_VI_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vminu.vv
+`define INST_VMINU_VV 32'h10000057 // Opcode for vminu.vv
+`define INST_VMINU_VV_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vminu.vx
+`define INST_VMINU_VX 32'h10004057 // Opcode for vminu.vx
+`define INST_VMINU_VX_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vmaxu.vv
+`define INST_VMAXU_VV 32'h18000057 // Opcode for vmaxu.vv
+`define INST_VMAXU_VV_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
+
+// vmaxu.vx
+`define INST_VMAXU_VX 32'h18004057 // Opcode for vmaxu.vx
+`define INST_VMAXU_VX_MASK 32'hfc00707f // Mask for func3, funct7, and opcode
 
 // load vector instructions
 
