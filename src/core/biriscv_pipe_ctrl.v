@@ -46,8 +46,11 @@ module biriscv_pipe_ctrl
     ,input           issue_div_i
     ,input           issue_mul_i
     ,input           issue_branch_i
+    ,input           issue_v_alu_i // new
     ,input           issue_rd_valid_i
+    ,input           issue_vd_valid_i // new
     ,input  [4:0]    issue_rd_i
+    ,input  [4:0]    issue_vd_i // new
     ,input  [5:0]    issue_exception_i
     ,input           take_interrupt_i
     ,input           issue_branch_taken_i
@@ -56,6 +59,9 @@ module biriscv_pipe_ctrl
     ,input [31:0]    issue_opcode_i
     ,input [31:0]    issue_operand_ra_i
     ,input [31:0]    issue_operand_rb_i
+    ,input [31:0]    issue_operand_va_i // new
+    ,input [31:0]    issue_operand_vb_i // new
+    ,input [31:0]    issue_operand_vmask_i // new
 
     // Execution stage 1: ALU result
     ,input [31:0]    alu_result_e1_i
