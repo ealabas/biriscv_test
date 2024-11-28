@@ -29,6 +29,7 @@ module biriscv_pipe_ctrl
 #(
      parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS  = 1
+    ,parameter VLEN = 128
 )
 //-----------------------------------------------------------------
 // Ports
@@ -59,9 +60,11 @@ module biriscv_pipe_ctrl
     ,input [31:0]    issue_opcode_i
     ,input [31:0]    issue_operand_ra_i
     ,input [31:0]    issue_operand_rb_i
-    ,input [31:0]    issue_operand_va_i // new
-    ,input [31:0]    issue_operand_vb_i // new
-    ,input [31:0]    issue_operand_vmask_i // new
+
+    // Vector register inputs
+    ,input [VLEN-1:0]    issue_operand_va_i // new
+    ,input [VLEN-1:0]    issue_operand_vb_i // new
+    ,input [VLEN-1:0]    issue_operand_vmask_i // new
 
     // Execution stage 1: ALU result
     ,input [31:0]    alu_result_e1_i
@@ -83,6 +86,12 @@ module biriscv_pipe_ctrl
     ,output [31:0]   operand_ra_e1_o
     ,output [31:0]   operand_rb_e1_o
 
+    // Vector register outputs for stage 1
+    ,output [VLEN-1:0] v_alu_operand_va_e1_o // new, not used now
+    ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new, not used now
+    ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new, not used now
+    ,output [VLEN-1:0] v_alu_result_e1_o // new, not used now
+
     // Execution stage 2: Other results
     ,input           mem_complete_i
     ,input [31:0]    mem_result_e2_i
@@ -95,9 +104,25 @@ module biriscv_pipe_ctrl
     ,output [  4:0]  rd_e2_o
     ,output [31:0]   result_e2_o
 
+    // Vector register outputs for stage 2
+    ,output [VLEN-1:0] v_alu_operand_va_e2_o // new, not used now
+    ,output [VLEN-1:0] v_alu_operand_vb_e2_o  // new, not used now
+    ,output [VLEN-1:0] v_alu_operand_vmask_e2_o // new, not used now
+    ,output [VLEN-1:0] v_alu_result_e2_o // new, not used now
+
     // Out of pipe: Divide Result
     ,input           div_complete_i
     ,input  [31:0]   div_result_i
+
+    // Vector ALU Result
+    input            v_alu_complete_i, // new 
+    input [VLEN-1:0] v_alu_result_i, // new
+
+    // Outputs to Vector ALU
+    output            v_alu_start_o, // new, for debug
+    output [VLEN-1:0] v_alu_operand_va_o, // new
+    output [VLEN-1:0] v_alu_operand_vb_o, // new
+    output [VLEN-1:0] v_alu_operand_vmask_o // new
 
     // Commit
     ,output          valid_wb_o
@@ -130,7 +155,8 @@ wire branch_misaligned_w = (issue_branch_taken_i && issue_branch_target_i[1:0] !
 //-------------------------------------------------------------
 // E1 / Address
 //------------------------------------------------------------- 
-`define PCINFO_W     10
+`define PCINFO_W     11 // was 10 before, updated to 11 to add v_alu
+`define PCINFO_V_ALU     10
 `define PCINFO_ALU       0
 `define PCINFO_LOAD      1
 `define PCINFO_STORE     2
@@ -152,6 +178,7 @@ reg [31:0]              opcode_e1_q;
 reg [31:0]              operand_ra_e1_q;
 reg [31:0]              operand_rb_e1_q;
 reg [`EXCEPTION_W-1:0]  exception_e1_q;
+reg                     v_alu_start_e1_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -164,6 +191,7 @@ begin
     operand_ra_e1_q <= 32'b0;
     operand_rb_e1_q <= 32'b0;
     exception_e1_q  <= `EXCEPTION_W'b0;
+    v_alu_start_e1_q <= 1'b0; // new
 end
 // Stall - no change in E1 state
 else if (issue_stall_i)
@@ -171,6 +199,7 @@ else if (issue_stall_i)
 else if ((issue_valid_i && issue_accept_i) && ~(squash_e1_e2_o || squash_e1_e2_i))
 begin
     valid_e1_q                  <= 1'b1;
+    ctrl_e1_q[`PCINFO_V_ALU]    <= issue_v_alu_i & ~take_interrupt_i; // new
     ctrl_e1_q[`PCINFO_ALU]      <= ~(issue_lsu_i | issue_csr_i | issue_div_i | issue_mul_i);
     ctrl_e1_q[`PCINFO_LOAD]     <= issue_lsu_i &  issue_rd_valid_i & ~take_interrupt_i; // TODO: Check
     ctrl_e1_q[`PCINFO_STORE]    <= issue_lsu_i & ~issue_rd_valid_i & ~take_interrupt_i;
@@ -189,6 +218,7 @@ begin
     operand_rb_e1_q <= issue_operand_rb_i;
     exception_e1_q  <= (|issue_exception_i) ? issue_exception_i : 
                        branch_misaligned_w  ? `EXCEPTION_MISALIGNED_FETCH : `EXCEPTION_W'b0;
+    v_alu_start_e1_q <= issue_v_alu_i; // new
 end
 // No valid instruction (or pipeline flush event)
 else
@@ -201,6 +231,7 @@ begin
     operand_ra_e1_q <= 32'b0;
     operand_rb_e1_q <= 32'b0;
     exception_e1_q  <= `EXCEPTION_W'b0;
+    v_alu_start_e1_q <= 1'b0; // new
 end
 
 wire   alu_e1_w        = ctrl_e1_q[`PCINFO_ALU];
@@ -215,6 +246,7 @@ assign pc_e1_o         = pc_e1_q;
 assign opcode_e1_o     = opcode_e1_q;
 assign operand_ra_e1_o = operand_ra_e1_q;
 assign operand_rb_e1_o = operand_rb_e1_q;
+assign v_alu_start_o = v_alu_start_e1_q; // new
 
 //-------------------------------------------------------------
 // E2 / Mem result
@@ -293,6 +325,8 @@ begin
         result_e2_q <= div_result_i; 
     else if (ctrl_e1_q[`PCINFO_CSR])
         result_e2_q <= csr_result_value_e1_i;
+    else if (ctrl_e1_q{~PCINFO_V_ALU})
+        result_e2_q <= v_alu_result_i; // new, adding v_alu like mul
     else
         result_e2_q <= alu_result_e1_i;
 end
@@ -319,7 +353,8 @@ assign rd_e2_o         = {5{(valid_e2_w && ctrl_e2_q[`PCINFO_RD_VALID] && ~stall
 assign result_e2_o     = result_e2_r;
 
 // Load store result not ready when reaching E2
-assign stall_o         = (ctrl_e1_q[`PCINFO_DIV] && ~div_complete_i) || ((ctrl_e2_q[`PCINFO_LOAD] | ctrl_e2_q[`PCINFO_STORE]) & ~mem_complete_i);
+assign stall_o         = (ctrl_e1_q[`PCINFO_DIV] && ~div_complete_i) || ((ctrl_e2_q[`PCINFO_LOAD] | ctrl_e2_q[`PCINFO_STORE]) & ~mem_complete_i)
+                         || (ctrl_e1_q[`PCINFO_V_ALU] && ~v_alu_complete_i); // updated, added v_alu check
 
 reg [`EXCEPTION_W-1:0] exception_e2_r;
 always @ *
