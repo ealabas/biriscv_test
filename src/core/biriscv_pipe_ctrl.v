@@ -87,9 +87,9 @@ module biriscv_pipe_ctrl
     ,output [31:0]   operand_rb_e1_o
 
     // Vector register outputs for stage 1
-    ,output [VLEN-1:0] v_alu_operand_va_e1_o // new, not used now
-    ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new, not used now
-    ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new, not used now
+    ,output [VLEN-1:0] v_alu_operand_va_e1_o // new
+    ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new
+    ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new
     ,output [VLEN-1:0] v_alu_result_e1_o // new, not used now
 
     // Execution stage 2: Other results
@@ -105,10 +105,7 @@ module biriscv_pipe_ctrl
     ,output [31:0]   result_e2_o
 
     // Vector register outputs for stage 2
-    ,output [VLEN-1:0] v_alu_operand_va_e2_o // new, not used now
-    ,output [VLEN-1:0] v_alu_operand_vb_e2_o  // new, not used now
-    ,output [VLEN-1:0] v_alu_operand_vmask_e2_o // new, not used now
-    ,output [VLEN-1:0] v_alu_result_e2_o // new, not used now
+    ,output [VLEN-1:0] v_alu_result_e2_o // new
 
     // Out of pipe: Divide Result
     ,input           div_complete_i
@@ -120,9 +117,9 @@ module biriscv_pipe_ctrl
 
     // Outputs to Vector ALU
     output            v_alu_start_o, // new, for debug
-    output [VLEN-1:0] v_alu_operand_va_o, // new
-    output [VLEN-1:0] v_alu_operand_vb_o, // new
-    output [VLEN-1:0] v_alu_operand_vmask_o // new
+    output [VLEN-1:0] operand_va_wb_o, // new, for debug
+    output [VLEN-1:0] operand_vb_wb_o, // new, for debug
+    output [VLEN-1:0] mask_vm_wb_o // new, for debug
 
     // Commit
     ,output          valid_wb_o
@@ -155,7 +152,8 @@ wire branch_misaligned_w = (issue_branch_taken_i && issue_branch_target_i[1:0] !
 //-------------------------------------------------------------
 // E1 / Address
 //------------------------------------------------------------- 
-`define PCINFO_W     11 // was 10 before, updated to 11 to add v_alu
+`define PCINFO_W     12 // was 10 before, updated to 12 to add v_alu and v_lsu
+`define PCINFO_V_LSU     11
 `define PCINFO_V_ALU     10
 `define PCINFO_ALU       0
 `define PCINFO_LOAD      1
@@ -178,6 +176,9 @@ reg [31:0]              opcode_e1_q;
 reg [31:0]              operand_ra_e1_q;
 reg [31:0]              operand_rb_e1_q;
 reg [`EXCEPTION_W-1:0]  exception_e1_q;
+reg [VLEN-1:0]          operand_va_e1_q; //new
+reg [VLEN-1:0]          operand_vb_e1_q; //new
+reg                     mask_vm_e1_q; //new
 reg                     v_alu_start_e1_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
@@ -191,6 +192,9 @@ begin
     operand_ra_e1_q <= 32'b0;
     operand_rb_e1_q <= 32'b0;
     exception_e1_q  <= `EXCEPTION_W'b0;
+    operand_va_e1_q <= VLEN'b0; // new
+    operand_vb_e1_q <= VLEN'b0; // new
+    mask_vm_e1_q;   <= VLEN'b0; // new
     v_alu_start_e1_q <= 1'b0; // new
 end
 // Stall - no change in E1 state
@@ -199,6 +203,7 @@ else if (issue_stall_i)
 else if ((issue_valid_i && issue_accept_i) && ~(squash_e1_e2_o || squash_e1_e2_i))
 begin
     valid_e1_q                  <= 1'b1;
+    ctrl_e1_q[`PCINFO_V_LSU]    <= issue_v_lsu_i & ~take_interrupt_i; // new
     ctrl_e1_q[`PCINFO_V_ALU]    <= issue_v_alu_i & ~take_interrupt_i; // new
     ctrl_e1_q[`PCINFO_ALU]      <= ~(issue_lsu_i | issue_csr_i | issue_div_i | issue_mul_i);
     ctrl_e1_q[`PCINFO_LOAD]     <= issue_lsu_i &  issue_rd_valid_i & ~take_interrupt_i; // TODO: Check
@@ -218,6 +223,9 @@ begin
     operand_rb_e1_q <= issue_operand_rb_i;
     exception_e1_q  <= (|issue_exception_i) ? issue_exception_i : 
                        branch_misaligned_w  ? `EXCEPTION_MISALIGNED_FETCH : `EXCEPTION_W'b0;
+    operand_va_e1_q <= issue_operand_va_i; // new
+    operand_va_e1_q <= issue_operand_va_i; // new
+    mask_vm_e1_q    <= issue_operand_vmask_i; // new
     v_alu_start_e1_q <= issue_v_alu_i; // new
 end
 // No valid instruction (or pipeline flush event)
@@ -231,6 +239,9 @@ begin
     operand_ra_e1_q <= 32'b0;
     operand_rb_e1_q <= 32'b0;
     exception_e1_q  <= `EXCEPTION_W'b0;
+    operand_va_e1_q <= VLEN'b0; // new
+    operand_va_e1_q <= VLEN'b0; // new
+    mask_vm_e1_q    <= VLEN'b0; // new
     v_alu_start_e1_q <= 1'b0; // new
 end
 
@@ -246,6 +257,10 @@ assign pc_e1_o         = pc_e1_q;
 assign opcode_e1_o     = opcode_e1_q;
 assign operand_ra_e1_o = operand_ra_e1_q;
 assign operand_rb_e1_o = operand_rb_e1_q;
+assign v_alu_operand_va_e1_o = operand_va_e1_q; // new
+assign v_alu_operand_vb_e1_o = operand_vb_e1_q; // new
+assign v_alu_operand_vmask_e1_o = mask_vm_e1_q; // new
+assign v_alu_e1_o        = ctrl_e1_q[`PCINFO_V_ALU]; // new
 assign v_alu_start_o = v_alu_start_e1_q; // new
 
 //-------------------------------------------------------------
@@ -262,6 +277,10 @@ reg [31:0]              opcode_e2_q;
 reg [31:0]              operand_ra_e2_q;
 reg [31:0]              operand_rb_e2_q;
 reg [`EXCEPTION_W-1:0]  exception_e2_q;
+reg [VLEN-1:0]          operand_va_e2_q; // new
+reg [VLEN-1:0]          operand_vb_e2_q; // new
+reg [VLEN-1:0]          mask_vm_e2_q; // new
+reg [VLEN-1:0]          v_alu_result_e2_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -277,6 +296,10 @@ begin
     operand_rb_e2_q <= 32'b0;
     result_e2_q     <= 32'b0;
     exception_e2_q  <= `EXCEPTION_W'b0;
+    operand_va_e2_q <= VLEN'b0; // new
+    operand_vb_e2_q <= VLEN'b0; // new
+    mask_vm_e2_q;   <= VLEN'b0; // new
+    v_alu_result_e2_q <= VLEN'b0; // new
 end
 // Stall - no change in E2 state
 else if (issue_stall_i)
@@ -295,6 +318,10 @@ begin
     operand_rb_e2_q <= 32'b0;
     result_e2_q     <= 32'b0;
     exception_e2_q  <= `EXCEPTION_W'b0;
+    operand_va_e2_q <= VLEN'b0; // new
+    operand_vb_e2_q <= VLEN'b0; // new
+    mask_vm_e2_q;   <= VLEN'b0; // new
+    v_alu_result_e2_q <= VLEN'b0; // new    
 end
 // Normal pipeline advance
 else
@@ -308,6 +335,9 @@ begin
     opcode_e2_q     <= opcode_e1_q;
     operand_ra_e2_q <= operand_ra_e1_q;
     operand_rb_e2_q <= operand_rb_e1_q;
+    operand_va_e2_q <= operand_va_e1_q; // new
+    operand_vb_e2_q <= operand_vb_e1_q; // new
+    mask_vm_e2_q    <= mask_vm_e1_q; // new
 
     // Launch interrupt
     if (ctrl_e1_q[`PCINFO_INTR])
@@ -325,13 +355,14 @@ begin
         result_e2_q <= div_result_i; 
     else if (ctrl_e1_q[`PCINFO_CSR])
         result_e2_q <= csr_result_value_e1_i;
-    else if (ctrl_e1_q{~PCINFO_V_ALU})
-        result_e2_q <= v_alu_result_i; // new, adding v_alu like mul
+    else if (ctrl_e1_q[`PCINFO_V_ALU])
+        v_alu_result_e2_q <= v_alu_result_i // new, adding v_alu //EMO - CHECK!
     else
         result_e2_q <= alu_result_e1_i;
 end
 
 reg [31:0] result_e2_r;
+reg [VLEN-1:0] v_alu_result_e2_r; // new
 
 wire valid_e2_w      = valid_e2_q & ~issue_stall_i;
 
@@ -339,7 +370,7 @@ always @ *
 begin
     // Default: ALU result
     result_e2_r = result_e2_q;
-
+    v_alu_result_e2_r = v_alu_result_e2_q; // new
     if (SUPPORT_LOAD_BYPASS && valid_e2_w && (ctrl_e2_q[`PCINFO_LOAD] || ctrl_e2_q[`PCINFO_STORE]))
         result_e2_r = mem_result_e2_i;
     else if (SUPPORT_MUL_BYPASS && valid_e2_w && ctrl_e2_q[`PCINFO_MUL])
@@ -351,6 +382,8 @@ assign load_e2_o       = ctrl_e2_q[`PCINFO_LOAD];
 assign mul_e2_o        = ctrl_e2_q[`PCINFO_MUL];
 assign rd_e2_o         = {5{(valid_e2_w && ctrl_e2_q[`PCINFO_RD_VALID] && ~stall_o)}} & opcode_e2_q[`RD_IDX_R];
 assign result_e2_o     = result_e2_r;
+assign v_alu_e2_o = ctrl_e2_q[`PCINFO_ALU]; // new //EMO - Where to add v_alu_e2_o
+assign v_alu_result_e2_o = v_alu_result_e2_r; // new 
 
 // Load store result not ready when reaching E2
 assign stall_o         = (ctrl_e1_q[`PCINFO_DIV] && ~div_complete_i) || ((ctrl_e2_q[`PCINFO_LOAD] | ctrl_e2_q[`PCINFO_STORE]) & ~mem_complete_i)
@@ -391,6 +424,10 @@ reg [31:0]              opcode_wb_q;
 reg [31:0]              operand_ra_wb_q;
 reg [31:0]              operand_rb_wb_q;
 reg [`EXCEPTION_W-1:0]  exception_wb_q;
+reg [VLEN-1:0]          v_alu_result_wb_q; // new
+reg [VLEN-1:0]          operand_va_wb_q; // new
+reg [VLEN-1:0]          operand_vb_wb_q; // new
+reg [VLEN-1:0]          mask_vm_wb_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -406,6 +443,10 @@ begin
     operand_rb_wb_q <= 32'b0;
     result_wb_q     <= 32'b0;
     exception_wb_q  <= `EXCEPTION_W'b0;
+    v_alu_result_wb_q <= VLEN'b0; // new
+    operand_va_wb_q <= VLEN'b0; // new
+    operand_vb_wb_q <= VLEN'b0; // new
+    mask_vm_wb_q    <= VLEN'b0; // new
 end
 // Stall - no change in WB state
 else if (issue_stall_i)
@@ -423,6 +464,10 @@ begin
     operand_rb_wb_q <= 32'b0;
     result_wb_q     <= 32'b0;
     exception_wb_q  <= `EXCEPTION_W'b0;
+    v_alu_result_wb_q <= VLEN'b0; // new
+    operand_va_wb_q <= VLEN'b0; // new
+    operand_vb_wb_q <= VLEN'b0; // new
+    mask_vm_wb_q    <= VLEN'b0; // new
 end
 else
 begin
@@ -454,11 +499,16 @@ begin
     operand_ra_wb_q <= operand_ra_e2_q;
     operand_rb_wb_q <= operand_rb_e2_q;
     exception_wb_q  <= exception_e2_r;
+    operand_va_wb_q <= operand_va_e2_q; // new
+    operand_vb_wb_q <= operand_vb_e2_q; // new
+    mask_vm_wb_q    <= mask_vm_e2_q; // new
 
     if (valid_e2_w && (ctrl_e2_q[`PCINFO_LOAD] || ctrl_e2_q[`PCINFO_STORE]))
         result_wb_q <= mem_result_e2_i;
     else if (valid_e2_w && ctrl_e2_q[`PCINFO_MUL])
         result_wb_q <= mul_result_e2_i;
+    else if (valid_e2_w && ctrl_e2_q[`PCINFO_V_ALU])
+        v_alu_result_wb_q <= v_alu_result_e2_o; // new //EMO - CHECK HERE
     else
         result_wb_q <= result_e2_q;
 end
@@ -474,6 +524,9 @@ assign pc_wb_o         = pc_wb_q;
 assign opcode_wb_o     = opcode_wb_q;
 assign operand_ra_wb_o = operand_ra_wb_q;
 assign operand_rb_wb_o = operand_rb_wb_q;
+assign operand_va_wb_o = operand_va_wb_q; // new, for debug
+assign operand_vb_wb_o = operand_vb_wb_q; // new, for debug
+assign mask_vm_wb_o    = mask_vm_wb_q; // new, for debug
 
 assign exception_wb_o  = exception_wb_q;
 
