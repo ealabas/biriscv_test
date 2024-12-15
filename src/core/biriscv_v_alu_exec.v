@@ -47,6 +47,8 @@ module biriscv_v_alu_exec#(
     ,input  [ VLEN - 1:0]  opcode_vmask_operand_i
     ,input           hold_i
 
+    // EMO - v_alu_complete signal required 
+
     // Outputs
     ,output [ 31:0]  writeback_value_o
 );

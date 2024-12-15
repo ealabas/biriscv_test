@@ -48,6 +48,7 @@ module biriscv_pipe_ctrl
     ,input           issue_mul_i
     ,input           issue_branch_i
     ,input           issue_v_alu_i // new
+    ,input           issue_v_lsu_i // new
     ,input           issue_rd_valid_i
     ,input           issue_vd_valid_i // new
     ,input  [4:0]    issue_rd_i
@@ -90,7 +91,6 @@ module biriscv_pipe_ctrl
     ,output [VLEN-1:0] v_alu_operand_va_e1_o // new
     ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new
     ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new
-    ,output [VLEN-1:0] v_alu_result_e1_o // new, not used now
 
     // Execution stage 2: Other results
     ,input           mem_complete_i
@@ -112,14 +112,13 @@ module biriscv_pipe_ctrl
     ,input  [31:0]   div_result_i
 
     // Vector ALU Result
-    input            v_alu_complete_i, // new 
-    input [VLEN-1:0] v_alu_result_i, // new
+    ,input            v_alu_complete_i // new
+    ,input [VLEN-1:0] v_alu_result_i // new
 
     // Outputs to Vector ALU
-    output            v_alu_start_o, // new, for debug
-    output [VLEN-1:0] operand_va_wb_o, // new, for debug
-    output [VLEN-1:0] operand_vb_wb_o, // new, for debug
-    output [VLEN-1:0] mask_vm_wb_o // new, for debug
+    ,output [VLEN-1:0] operand_va_wb_o // new, for debug
+    ,output [VLEN-1:0] operand_vb_wb_o // new, for debug
+    ,output [VLEN-1:0] mask_vm_wb_o // new, for debug
 
     // Commit
     ,output          valid_wb_o
@@ -178,8 +177,7 @@ reg [31:0]              operand_rb_e1_q;
 reg [`EXCEPTION_W-1:0]  exception_e1_q;
 reg [VLEN-1:0]          operand_va_e1_q; //new
 reg [VLEN-1:0]          operand_vb_e1_q; //new
-reg                     mask_vm_e1_q; //new
-reg                     v_alu_start_e1_q; // new
+reg [VLEN-1:0]          mask_vm_e1_q; //new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -195,7 +193,6 @@ begin
     operand_va_e1_q <= VLEN'b0; // new
     operand_vb_e1_q <= VLEN'b0; // new
     mask_vm_e1_q;   <= VLEN'b0; // new
-    v_alu_start_e1_q <= 1'b0; // new
 end
 // Stall - no change in E1 state
 else if (issue_stall_i)
@@ -224,9 +221,8 @@ begin
     exception_e1_q  <= (|issue_exception_i) ? issue_exception_i : 
                        branch_misaligned_w  ? `EXCEPTION_MISALIGNED_FETCH : `EXCEPTION_W'b0;
     operand_va_e1_q <= issue_operand_va_i; // new
-    operand_va_e1_q <= issue_operand_va_i; // new
+    operand_vb_e1_q <= issue_operand_vb_i; // new
     mask_vm_e1_q    <= issue_operand_vmask_i; // new
-    v_alu_start_e1_q <= issue_v_alu_i; // new
 end
 // No valid instruction (or pipeline flush event)
 else
@@ -242,7 +238,6 @@ begin
     operand_va_e1_q <= VLEN'b0; // new
     operand_va_e1_q <= VLEN'b0; // new
     mask_vm_e1_q    <= VLEN'b0; // new
-    v_alu_start_e1_q <= 1'b0; // new
 end
 
 wire   alu_e1_w        = ctrl_e1_q[`PCINFO_ALU];
@@ -260,8 +255,7 @@ assign operand_rb_e1_o = operand_rb_e1_q;
 assign v_alu_operand_va_e1_o = operand_va_e1_q; // new
 assign v_alu_operand_vb_e1_o = operand_vb_e1_q; // new
 assign v_alu_operand_vmask_e1_o = mask_vm_e1_q; // new
-assign v_alu_e1_o        = ctrl_e1_q[`PCINFO_V_ALU]; // new
-assign v_alu_start_o = v_alu_start_e1_q; // new
+assign v_alu_e1_o      = ctrl_e1_q[`PCINFO_V_ALU]; // new
 
 //-------------------------------------------------------------
 // E2 / Mem result
@@ -508,7 +502,7 @@ begin
     else if (valid_e2_w && ctrl_e2_q[`PCINFO_MUL])
         result_wb_q <= mul_result_e2_i;
     else if (valid_e2_w && ctrl_e2_q[`PCINFO_V_ALU])
-        v_alu_result_wb_q <= v_alu_result_e2_o; // new //EMO - CHECK HERE
+        v_alu_result_wb_q <= v_alu_result_i; // new //EMO - CHECK HERE
     else
         result_wb_q <= result_e2_q;
 end
