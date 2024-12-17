@@ -49,8 +49,9 @@ module biriscv_pipe_ctrl
     ,input           issue_branch_i
     ,input           issue_v_alu_i // new
     ,input           issue_v_lsu_i // new
+    ,input           issue_vd_valid_i // new // EMO - check where this signal comes from!
     ,input           issue_rd_valid_i
-    ,input           issue_vd_valid_i // new
+    // EMO - Check if vd_valid_i needed here 
     ,input  [4:0]    issue_rd_i
     ,input  [4:0]    issue_vd_i // new
     ,input  [5:0]    issue_exception_i
@@ -65,7 +66,7 @@ module biriscv_pipe_ctrl
     // Vector register inputs
     ,input [VLEN-1:0]    issue_operand_va_i // new
     ,input [VLEN-1:0]    issue_operand_vb_i // new
-    ,input [VLEN-1:0]    issue_operand_vmask_i // new
+    ,input               issue_operand_vmask_i // new
 
     // Execution stage 1: ALU result
     ,input [31:0]    alu_result_e1_i
@@ -81,6 +82,8 @@ module biriscv_pipe_ctrl
     ,output          store_e1_o
     ,output          mul_e1_o
     ,output          branch_e1_o
+    ,output          v_alu_e1_o // new
+    ,output          vd_e1_o // new
     ,output [  4:0]  rd_e1_o
     ,output [31:0]   pc_e1_o
     ,output [31:0]   opcode_e1_o
@@ -90,7 +93,7 @@ module biriscv_pipe_ctrl
     // Vector register outputs for stage 1
     ,output [VLEN-1:0] v_alu_operand_va_e1_o // new
     ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new
-    ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new
+    ,output            v_alu_operand_vmask_e1_o // new
 
     // Execution stage 2: Other results
     ,input           mem_complete_i
@@ -102,9 +105,11 @@ module biriscv_pipe_ctrl
     ,output          load_e2_o
     ,output          mul_e2_o
     ,output [  4:0]  rd_e2_o
+    ,output [  4:0]  vd_e2_o // new
     ,output [31:0]   result_e2_o
 
     // Vector register outputs for stage 2
+    ,output          v_alu_e2_o
     ,output [VLEN-1:0] v_alu_result_e2_o // new
 
     // Out of pipe: Divide Result
@@ -118,12 +123,14 @@ module biriscv_pipe_ctrl
     // Outputs to Vector ALU
     ,output [VLEN-1:0] operand_va_wb_o // new, for debug
     ,output [VLEN-1:0] operand_vb_wb_o // new, for debug
-    ,output [VLEN-1:0] mask_vm_wb_o // new, for debug
+    ,output            mask_vm_wb_o // new, for debug
 
     // Commit
     ,output          valid_wb_o
     ,output          csr_wb_o
     ,output [  4:0]  rd_wb_o
+    ,output [  4:0]  vd_wb_o // new
+    ,output [VLEN-1:0] v_alu_result_wb_o // new
     ,output [31:0]   result_wb_o
     ,output [31:0]   pc_wb_o
     ,output [31:0]   opcode_wb_o
@@ -151,8 +158,9 @@ wire branch_misaligned_w = (issue_branch_taken_i && issue_branch_target_i[1:0] !
 //-------------------------------------------------------------
 // E1 / Address
 //------------------------------------------------------------- 
-`define PCINFO_W     12 // was 10 before, updated to 12 to add v_alu and v_lsu
-`define PCINFO_V_LSU     11
+`define PCINFO_W     13 // was 10 before, updated to 13 to add v_alu and v_lsu and vd_valid
+`define PCINFO_VD_VALID  12 // new
+`define PCINFO_V_LSU     11 
 `define PCINFO_V_ALU     10
 `define PCINFO_ALU       0
 `define PCINFO_LOAD      1
@@ -166,6 +174,7 @@ wire branch_misaligned_w = (issue_branch_taken_i && issue_branch_target_i[1:0] !
 `define PCINFO_COMPLETE  9
 
 `define RD_IDX_R    11:7
+`define VD_IDX_R    11:7 // new
 
 reg                     valid_e1_q;
 reg [`PCINFO_W-1:0]     ctrl_e1_q;
@@ -177,7 +186,7 @@ reg [31:0]              operand_rb_e1_q;
 reg [`EXCEPTION_W-1:0]  exception_e1_q;
 reg [VLEN-1:0]          operand_va_e1_q; //new
 reg [VLEN-1:0]          operand_vb_e1_q; //new
-reg [VLEN-1:0]          mask_vm_e1_q; //new
+reg                     mask_vm_e1_q; //new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -192,7 +201,7 @@ begin
     exception_e1_q  <= `EXCEPTION_W'b0;
     operand_va_e1_q <= VLEN'b0; // new
     operand_vb_e1_q <= VLEN'b0; // new
-    mask_vm_e1_q;   <= VLEN'b0; // new
+    mask_vm_e1_q;   <= 1'b0; // new
 end
 // Stall - no change in E1 state
 else if (issue_stall_i)
@@ -210,6 +219,7 @@ begin
     ctrl_e1_q[`PCINFO_MUL]      <= issue_mul_i & ~take_interrupt_i;
     ctrl_e1_q[`PCINFO_BRANCH]   <= issue_branch_i & ~take_interrupt_i;
     ctrl_e1_q[`PCINFO_RD_VALID] <= issue_rd_valid_i & ~take_interrupt_i;
+    ctrl_e1_q[`PCINFO_VD_VALID] <= issue_vd_valid_i & ~take_interrupt_i; // new
     ctrl_e1_q[`PCINFO_INTR]     <= take_interrupt_i;
     ctrl_e1_q[`PCINFO_COMPLETE] <= 1'b1;
 
@@ -237,7 +247,7 @@ begin
     exception_e1_q  <= `EXCEPTION_W'b0;
     operand_va_e1_q <= VLEN'b0; // new
     operand_va_e1_q <= VLEN'b0; // new
-    mask_vm_e1_q    <= VLEN'b0; // new
+    mask_vm_e1_q    <= 1'b0; // new
 end
 
 wire   alu_e1_w        = ctrl_e1_q[`PCINFO_ALU];
@@ -247,6 +257,8 @@ wire   csr_e1_w        = ctrl_e1_q[`PCINFO_CSR];
 wire   div_e1_w        = ctrl_e1_q[`PCINFO_DIV];
 assign mul_e1_o        = ctrl_e1_q[`PCINFO_MUL];
 assign branch_e1_o     = ctrl_e1_q[`PCINFO_BRANCH];
+assign v_alu_e1_o      = ctrl_e1_q[`PCINFO_V_ALU]; // new
+assign vd_e1_o         = {5{ctrl_e1_q[`PCINFO_VD_VALID]}} & opcode_e1_q[`VD_IDX_R]; // new
 assign rd_e1_o         = {5{ctrl_e1_q[`PCINFO_RD_VALID]}} & opcode_e1_q[`RD_IDX_R];
 assign pc_e1_o         = pc_e1_q;
 assign opcode_e1_o     = opcode_e1_q;
@@ -273,7 +285,7 @@ reg [31:0]              operand_rb_e2_q;
 reg [`EXCEPTION_W-1:0]  exception_e2_q;
 reg [VLEN-1:0]          operand_va_e2_q; // new
 reg [VLEN-1:0]          operand_vb_e2_q; // new
-reg [VLEN-1:0]          mask_vm_e2_q; // new
+reg                     mask_vm_e2_q; // new
 reg [VLEN-1:0]          v_alu_result_e2_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
@@ -292,7 +304,7 @@ begin
     exception_e2_q  <= `EXCEPTION_W'b0;
     operand_va_e2_q <= VLEN'b0; // new
     operand_vb_e2_q <= VLEN'b0; // new
-    mask_vm_e2_q;   <= VLEN'b0; // new
+    mask_vm_e2_q;   <= 1'b0; // new
     v_alu_result_e2_q <= VLEN'b0; // new
 end
 // Stall - no change in E2 state
@@ -314,7 +326,7 @@ begin
     exception_e2_q  <= `EXCEPTION_W'b0;
     operand_va_e2_q <= VLEN'b0; // new
     operand_vb_e2_q <= VLEN'b0; // new
-    mask_vm_e2_q;   <= VLEN'b0; // new
+    mask_vm_e2_q;   <= 1'b0; // new
     v_alu_result_e2_q <= VLEN'b0; // new    
 end
 // Normal pipeline advance
@@ -376,8 +388,9 @@ assign load_e2_o       = ctrl_e2_q[`PCINFO_LOAD];
 assign mul_e2_o        = ctrl_e2_q[`PCINFO_MUL];
 assign rd_e2_o         = {5{(valid_e2_w && ctrl_e2_q[`PCINFO_RD_VALID] && ~stall_o)}} & opcode_e2_q[`RD_IDX_R];
 assign result_e2_o     = result_e2_r;
-assign v_alu_e2_o = ctrl_e2_q[`PCINFO_ALU]; // new //EMO - Where to add v_alu_e2_o
+assign v_alu_e2_o      = ctrl_e2_q[`PCINFO_ALU]; // new //EMO - Where to add v_alu_e2_o
 assign v_alu_result_e2_o = v_alu_result_e2_r; // new 
+assign vd_e2_o         = {5{(valid_e2_w && ctrl_e2_q[`PCINFO_VD_VALID] && ~stall_o)}} & opcode_e2_q[`VD_IDX_R]; // new
 
 // Load store result not ready when reaching E2
 assign stall_o         = (ctrl_e1_q[`PCINFO_DIV] && ~div_complete_i) || ((ctrl_e2_q[`PCINFO_LOAD] | ctrl_e2_q[`PCINFO_STORE]) & ~mem_complete_i)
@@ -421,7 +434,7 @@ reg [`EXCEPTION_W-1:0]  exception_wb_q;
 reg [VLEN-1:0]          v_alu_result_wb_q; // new
 reg [VLEN-1:0]          operand_va_wb_q; // new
 reg [VLEN-1:0]          operand_vb_wb_q; // new
-reg [VLEN-1:0]          mask_vm_wb_q; // new
+reg                     mask_vm_wb_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -440,7 +453,7 @@ begin
     v_alu_result_wb_q <= VLEN'b0; // new
     operand_va_wb_q <= VLEN'b0; // new
     operand_vb_wb_q <= VLEN'b0; // new
-    mask_vm_wb_q    <= VLEN'b0; // new
+    mask_vm_wb_q    <= 1'b0; // new
 end
 // Stall - no change in WB state
 else if (issue_stall_i)
@@ -461,7 +474,7 @@ begin
     v_alu_result_wb_q <= VLEN'b0; // new
     operand_va_wb_q <= VLEN'b0; // new
     operand_vb_wb_q <= VLEN'b0; // new
-    mask_vm_wb_q    <= VLEN'b0; // new
+    mask_vm_wb_q    <= 1'b0; // new
 end
 else
 begin
@@ -513,6 +526,8 @@ wire complete_wb_w     = ctrl_wb_q[`PCINFO_COMPLETE] & ~issue_stall_i;
 assign valid_wb_o      = valid_wb_q & ~issue_stall_i;
 assign csr_wb_o        = ctrl_wb_q[`PCINFO_CSR] & ~issue_stall_i; // TODO: Fault disable???
 assign rd_wb_o         = {5{(valid_wb_o && ctrl_wb_q[`PCINFO_RD_VALID] && ~stall_o)}} & opcode_wb_q[`RD_IDX_R];
+assign vd_wb_o         = {5{(valid_wb_o && ctrl_wb_q[`PCINFO_VD_VALID] && ~stall_o)}} & opcode_wb_q[`VD_IDX_R]; // new
+assign v_alu_result_wb_o = v_alu_result_wb_q; // new
 assign result_wb_o     = result_wb_q;
 assign pc_wb_o         = pc_wb_q;
 assign opcode_wb_o     = opcode_wb_q;
