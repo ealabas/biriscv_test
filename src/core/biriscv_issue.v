@@ -780,7 +780,7 @@ if (rst_i)
     v_alu_pending_q <= 1'b0;
 else if (pipe0_squash_e1_e2_w || pipe1_squash_e1_e2_w)
     v_alu_pending_q <= 1'b0;
-else if (v_alu_opcode_valid_o && issue_a_vector_w)
+else if (v_alu_opcode_valid_o && issue_a_v_alu_w)
     v_alu_pending_q <= 1'b1;
 else if (writeback_v_alu_valid_i)
     v_alu_pending_q <= 1'b0;
