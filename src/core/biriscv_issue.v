@@ -70,7 +70,7 @@ module biriscv_issue
     ,input           fetch1_instr_div_i
     ,input           fetch1_instr_csr_i
     ,input           fetch1_instr_rd_valid_i
-    ,input           fetch0_instr_vd_valid_i // new
+    ,input           fetch1_instr_vd_valid_i // new
     ,input           fetch1_instr_v_alu_i // new
     ,input           fetch1_instr_invalid_i
     ,input           branch_exec0_request_i
@@ -777,13 +777,13 @@ assign squash_w = pipe0_squash_e1_e2_w || pipe1_squash_e1_e2_w;
 // new
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
-    vector_pending_q <= 1'b0;
+    v_alu_pending_q <= 1'b0;
 else if (pipe0_squash_e1_e2_w || pipe1_squash_e1_e2_w)
-    vector_pending_q <= 1'b0;
-else if (vexec_opcode_valid_o && issue_a_vector_w)
-    vector_pending_q <= 1'b1;
+    v_alu_pending_q <= 1'b0;
+else if (v_alu_opcode_valid_o && issue_a_vector_w)
+    v_alu_pending_q <= 1'b1;
 else if (writeback_v_alu_valid_i)
-    vector_pending_q <= 1'b0;
+    v_alu_pending_q <= 1'b0;
 
 //-------------------------------------------------------------
 // Issue / scheduling logic
@@ -871,7 +871,7 @@ begin
             scoreboard_r[issue_a_rd_idx_w] = 1'b1;
         
         //new
-        if (opcode_a_accept_r && issue_a_vb_alloc_w && (|issue_a_vd_idx_w))
+        if (opcode_a_accept_r && issue_a_v_sb_alloc_w && (|issue_a_vd_idx_w))
             v_scoreboard_r[issue_a_vd_idx_w] = 1'b1;
     end
 
@@ -898,7 +898,7 @@ begin
             scoreboard_r[issue_b_rd_idx_w] = 1'b1;
 
         //new
-        if (opcode_b_accept_r && issue_b_vb_alloc_w && (|issue_b_vd_idx_w))
+        if (opcode_b_accept_r && issue_a_v_sb_alloc_w && (|issue_b_vd_idx_w))
             v_scoreboard_r[issue_b_vd_idx_w] = 1'b1;
     end    
 end
@@ -967,13 +967,13 @@ wire [31:0] issue_b_va_value_w;
 wire [31:0] issue_b_vb_value_w;
 
 // Vector Register file
-biriscv_v_register
+biriscv_v_regfile
 #(
      .SUPPORT_REGFILE_XILINX(SUPPORT_REGFILE_XILINX)
     ,.SUPPORT_DUAL_ISSUE(SUPPORT_DUAL_ISSUE)
     ,.VLEN(VLEN)
 )
-u_regfile
+u_v_regfile
 (
     .clk_i(clk_i),
     .rst_i(rst_i),
