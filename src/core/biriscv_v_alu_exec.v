@@ -47,6 +47,8 @@ module biriscv_v_alu_exec#(
     ,input  [ VLEN - 1:0]  opcode_vmask_operand_i
     ,input           hold_i
 
+    // EMO - v_alu_complete signal required 
+
     // Outputs
     ,output [ 31:0]  writeback_value_o
 );
@@ -62,12 +64,14 @@ module biriscv_v_alu_exec#(
 // Opcode decode
 //-------------------------------------------------------------
 reg [VLEN - 1:0]  imm4_r;
+reg [VLEN - 1:0]  register_operand_r;
 reg               vm_r;
 
 always @ *
 begin
     imm4_r   = {{(VLEN - 5){opcode_opcode_i[19]}}, opcode_opcode_i[19:15]};
     vm_r     = opcode_opcode_i[25];
+    register_operand_r     = {{(VLEN - 32){opcode_ra_operand_i[31]}}, opcode_ra_operand_i};
 end
 reg  [VLEN - 1:0]  result_r;
 
@@ -98,6 +102,160 @@ begin
             end
         end        
     end
+    else if ((opcode_opcode_i & `INST_VADD_VX_MASK) == `INST_VADD_VX) // vadd.vx
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] + register_operand_r[ELEN - 1 : 0];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] + register_operand_r[ELEN - 1 : 0] : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VADD_VI_MASK) == `INST_VADD_VI) // vadd.vi
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] + imm4_r[ELEN - 1 : 0];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] + imm4_r[ELEN - 1 : 0] : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VSUB_VV_MASK) == `INST_VSUB_VV) // vsub.vv
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN] : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VSUB_VX_MASK) == `INST_VSUB_VX) // vsub.vx
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - register_operand_r[ELEN - 1 : 0];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - register_operand_r[ELEN - 1 : 0]; : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VRSUB_VX_MASK) == `INST_VRSUB_VX) // vrsub.vx
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = register_operand_r[ELEN - 1 : 0] - opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? register_operand_r[ELEN - 1 : 0] - opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VRSUB_VI_MASK) == `INST_VRSUB_VI) // vrsub.vi
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = imm4_r[ELEN - 1 : 0] - opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN];
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? imm4_r[ELEN - 1 : 0] - opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VMINU_VV_MASK) == `INST_VMINU_VV) // vminu_vv
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] < opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]) 
+                                                ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN]
+                                                : opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]);
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] 
+                                                ? ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] < opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]) 
+                                                    ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] 
+                                                    : opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN])
+                                                    : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VMINU_VX_MASK) == `INST_VMINU_VX) // vminu_vx
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] < register_operand_r[ELEN - 1 : 0])
+                                                ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN]
+                                                : register_operand_r[ELEN - 1 : 0]);
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] 
+                                                ? ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] < register_operand_r[ELEN - 1 : 0]) 
+                                                    ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] 
+                                                    : register_operand_r[ELEN - 1 : 0])
+                                                    : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VMAXU_VV_MASK) == `INST_VMAXU_VV) // vmaxu_vv
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] > opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]) 
+                                                ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN]
+                                                : opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]);
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] 
+                                                ? ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] > opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN]) 
+                                                    ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] 
+                                                    : opcode_vb_operand_i[(i+1)*ELEN-1 -: ELEN])
+                                                    : {ELEN{1'b0}};
+            end
+        end
+    end
+    else if ((opcode_opcode_i & `INST_VMAXU_VX_MASK) == `INST_VMAXU_VX) // vmaxu_vx
+    begin
+        if (vm_r == 1'b1) begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] > register_operand_r[(i+1)*ELEN-1 -: ELEN]) 
+                                                ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN]
+                                                : register_operand_r[(i+1)*ELEN-1 -: ELEN]);
+            end
+        end
+        else begin
+            for (i = 0; i < VLEN / ELEN; i = i + 1) begin
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] 
+                                                ? ((opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] > register_operand_r[(i+1)*ELEN-1 -: ELEN]) 
+                                                    ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] 
+                                                    : register_operand_r[(i+1)*ELEN-1 -: ELEN])
+                                                    : {ELEN{1'b0}};
+            end
+        end
+    end         
 end
 
 

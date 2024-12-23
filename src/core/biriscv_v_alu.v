@@ -212,7 +212,7 @@ begin
             end
         end
 
-       `ALU_VMINUVX: 
+       `ALU_VMAXUVX: 
         begin
             if (alu_vm == 1'b1) begin
                 for (i = 0; i < VLEN / ELEN; i = i + 1) begin
