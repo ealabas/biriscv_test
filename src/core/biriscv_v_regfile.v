@@ -193,6 +193,7 @@ end
 //-----------------------------------------------------------------
 else
 begin: REGFILE
+    reg [VLEN-1:0] reg_v0_q;
     reg [VLEN-1:0] reg_v1_q;
     reg [VLEN-1:0] reg_v2_q;
     reg [VLEN-1:0] reg_v3_q;
@@ -227,7 +228,7 @@ begin: REGFILE
 
 
     // Simulation-friendly names
-    wire [VLEN-1:0] x0_v0_w   = {VLEN{1'b0}};
+    wire [VLEN-1:0] x0_v0_w   = reg_v0_q;
     wire [VLEN-1:0] x1_v1_w   = reg_v1_q;
     wire [VLEN-1:0] x2_v2_w   = reg_v2_q;
     wire [VLEN-1:0] x3_v3_w   = reg_v3_q;
@@ -269,6 +270,7 @@ begin: REGFILE
     always @ (posedge clk_i )
     if (rst_i)
     begin
+        reg_v0_q       <= {VLEN{1'b0}};
         reg_v1_q       <= {VLEN{1'b0}};
         reg_v2_q       <= {VLEN{1'b0}};
         reg_v3_q       <= {VLEN{1'b0}};
@@ -304,6 +306,8 @@ begin: REGFILE
     end
     else
     begin
+        if      (rd0_i == 5'd0)  reg_v0_q  <= rd0_value_i;
+        else if (rd1_i == 5'd0)  reg_v0_q  <= rd1_value_i;
         if      (rd0_i == 5'd1)  reg_v1_q  <= rd0_value_i;
         else if (rd1_i == 5'd1)  reg_v1_q  <= rd1_value_i;
         if      (rd0_i == 5'd2)  reg_v2_q  <= rd0_value_i;
@@ -376,6 +380,7 @@ begin: REGFILE
     always @ *
     begin
         case (ra0_i)
+        5'd0: ra0_value_r = reg_v0_q;
         5'd1: ra0_value_r = reg_v1_q;
         5'd2: ra0_value_r = reg_v2_q;
         5'd3: ra0_value_r = reg_v3_q;
@@ -411,6 +416,7 @@ begin: REGFILE
         endcase
 
         case (rb0_i)
+        5'd0: rb0_value_r = reg_v0_q;
         5'd1: rb0_value_r = reg_v1_q;
         5'd2: rb0_value_r = reg_v2_q;
         5'd3: rb0_value_r = reg_v3_q;
@@ -455,6 +461,7 @@ begin: REGFILE
     always @ *
     begin
         case (ra1_i)
+        5'd0: ra1_value_r = reg_v0_q;
         5'd1: ra1_value_r = reg_v1_q;
         5'd2: ra1_value_r = reg_v2_q;
         5'd3: ra1_value_r = reg_v3_q;
@@ -490,6 +497,7 @@ begin: REGFILE
         endcase
 
         case (rb1_i)
+        5'd0: rb1_value_r = reg_v0_q;
         5'd1: rb1_value_r = reg_v1_q;
         5'd2: rb1_value_r = reg_v2_q;
         5'd3: rb1_value_r = reg_v3_q;
@@ -536,6 +544,7 @@ begin: REGFILE
         input [4:0] r;
     begin
         case (r)
+        5'd0: get_register = reg_v0_q;
         5'd1: get_register = reg_v1_q;
         5'd2: get_register = reg_v2_q;
         5'd3: get_register = reg_v3_q;

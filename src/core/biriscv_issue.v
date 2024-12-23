@@ -33,6 +33,8 @@ module biriscv_issue
     ,parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS = 1
     ,parameter SUPPORT_REGFILE_XILINX = 0
+    ,parameter SUPPORT_VECTOR_OPERATIONS = 1 // new
+    ,parameter VLEN = 128 // new
 )
 //-----------------------------------------------------------------
 // Ports
@@ -53,6 +55,8 @@ module biriscv_issue
     ,input           fetch0_instr_div_i
     ,input           fetch0_instr_csr_i
     ,input           fetch0_instr_rd_valid_i
+    ,input           fetch0_instr_vd_valid_i // new
+    ,input           fetch0_instr_v_alu_i // new
     ,input           fetch0_instr_invalid_i
     ,input           fetch1_valid_i
     ,input  [ 31:0]  fetch1_instr_i
@@ -66,6 +70,8 @@ module biriscv_issue
     ,input           fetch1_instr_div_i
     ,input           fetch1_instr_csr_i
     ,input           fetch1_instr_rd_valid_i
+    ,input           fetch1_instr_vd_valid_i // new
+    ,input           fetch1_instr_v_alu_i // new
     ,input           fetch1_instr_invalid_i
     ,input           branch_exec0_request_i
     ,input           branch_exec0_is_taken_i
@@ -100,6 +106,9 @@ module biriscv_issue
     ,input  [ 31:0]  writeback_mul_value_i
     ,input           writeback_div_valid_i
     ,input  [ 31:0]  writeback_div_value_i
+    // EMO - maybe a input here for the valud and value for v_alu. check.
+    ,input           writeback_v_alu_valid_i // new
+    ,input [VLEN-1:0] writeback_v_alu_value_i // new
     ,input  [ 31:0]  csr_result_e1_value_i
     ,input           csr_result_e1_write_i
     ,input  [ 31:0]  csr_result_e1_wdata_i
@@ -127,22 +136,35 @@ module biriscv_issue
     ,output          csr_opcode_valid_o
     ,output          mul_opcode_valid_o
     ,output          div_opcode_valid_o
+    ,output          v_alu_opcode_valid_o // new
     ,output [ 31:0]  opcode0_opcode_o
     ,output [ 31:0]  opcode0_pc_o
     ,output          opcode0_invalid_o
     ,output [  4:0]  opcode0_rd_idx_o
     ,output [  4:0]  opcode0_ra_idx_o
     ,output [  4:0]  opcode0_rb_idx_o
+    ,output [  4:0]  opcode0_vd_idx_o // new
+    ,output [  4:0]  opcode0_va_idx_o // new
+    ,output [  4:0]  opcode0_vb_idx_o // new
     ,output [ 31:0]  opcode0_ra_operand_o
     ,output [ 31:0]  opcode0_rb_operand_o
+    ,output [VLEN-1:0]  opcode0_va_operand_o // new
+    ,output [VLEN-1:0]  opcode0_vb_operand_o // new
+    ,output          opcode0_vmask_operand_o // new
     ,output [ 31:0]  opcode1_opcode_o
     ,output [ 31:0]  opcode1_pc_o
     ,output          opcode1_invalid_o
     ,output [  4:0]  opcode1_rd_idx_o
     ,output [  4:0]  opcode1_ra_idx_o
     ,output [  4:0]  opcode1_rb_idx_o
+    ,output [  4:0]  opcode1_vd_idx_o // new
+    ,output [  4:0]  opcode1_va_idx_o // new
+    ,output [  4:0]  opcode1_vb_idx_o // new
     ,output [ 31:0]  opcode1_ra_operand_o
     ,output [ 31:0]  opcode1_rb_operand_o
+    ,output [VLEN-1:0]  opcode1_va_operand_o // new
+    ,output [VLEN-1:0]  opcode1_vb_operand_o // new
+    ,output          opcode1_vmask_operand_o // new
     ,output [ 31:0]  lsu_opcode_opcode_o
     ,output [ 31:0]  lsu_opcode_pc_o
     ,output          lsu_opcode_invalid_o
@@ -159,6 +181,17 @@ module biriscv_issue
     ,output [  4:0]  mul_opcode_rb_idx_o
     ,output [ 31:0]  mul_opcode_ra_operand_o
     ,output [ 31:0]  mul_opcode_rb_operand_o
+    ,output [ 31:0]  v_alu_opcode_opcode_o // new
+    ,output [ 31:0]  v_alu_opcode_pc_o // new
+    ,output          v_alu_opcode_invalid_o // new
+    ,output [  4:0]  v_alu_opcode_ra_idx_o // new // EMO - check that if ra,rb needed. maybe only ra is enough, or none is needed.
+    ,output [  4:0]  v_alu_opcode_rb_idx_o // new 
+    ,output [  4:0]  v_alu_opcode_va_idx_o // new
+    ,output [  4:0]  v_alu_opcode_vb_idx_o // new
+    ,output [  4:0]  v_alu_opcode_vd_idx_o // new
+    ,output [VLEN-1:0] v_alu_opcode_va_operand_o // new
+    ,output [VLEN-1:0] v_alu_opcode_vb_operand_o // new
+    ,output [VLEN-1:0] v_alu_opcode_vmask_operand_o // new
     ,output [ 31:0]  csr_opcode_opcode_o
     ,output [ 31:0]  csr_opcode_pc_o
     ,output          csr_opcode_invalid_o
@@ -186,6 +219,7 @@ module biriscv_issue
 wire enable_dual_issue_w = SUPPORT_DUAL_ISSUE;
 wire enable_muldiv_w     = SUPPORT_MULDIV;
 wire enable_mul_bypass_w = SUPPORT_MUL_BYPASS;
+wire enable_vector_operations = SUPPORT_VECTOR_OPERATIONS; // new
 
 wire stall_w;
 wire squash_w;
@@ -307,26 +341,42 @@ end
 wire [4:0] issue_a_ra_idx_w   = opcode_a_r[19:15];
 wire [4:0] issue_a_rb_idx_w   = opcode_a_r[24:20];
 wire [4:0] issue_a_rd_idx_w   = opcode_a_r[11:7];
+wire [4:0] issue_a_va_idx_w   = opcode_a_r[19:15]; // new
+wire [4:0] issue_a_vb_idx_w   = opcode_a_r[24:20]; // new
+wire [4:0] issue_a_vd_idx_w   = opcode_a_r[11:7]; // new
+wire       issue_a_vmask_idx_w = 5'b0; // new
+wire       issue_a_vmask_w    = opcode_a_r[25]; // new
+// EMO - after checking ra,rb add here if needed for issue a
 wire       issue_a_sb_alloc_w = (slot0_valid_r ? fetch0_instr_rd_valid_i : fetch1_instr_rd_valid_i);
+wire       issue_a_v_sb_alloc_w = (slot0_valid_r ? fetch0_instr_vd_valid_i : fetch1_instr_vd_valid_i); // new
 wire       issue_a_exec_w     = (slot0_valid_r ? fetch0_instr_exec_i     : fetch1_instr_exec_i);
 wire       issue_a_lsu_w      = (slot0_valid_r ? fetch0_instr_lsu_i      : fetch1_instr_lsu_i);
 wire       issue_a_branch_w   = (slot0_valid_r ? fetch0_instr_branch_i   : fetch1_instr_branch_i);
 wire       issue_a_mul_w      = (slot0_valid_r ? fetch0_instr_mul_i      : fetch1_instr_mul_i);
 wire       issue_a_div_w      = (slot0_valid_r ? fetch0_instr_div_i      : fetch1_instr_div_i);
 wire       issue_a_csr_w      = (slot0_valid_r ? fetch0_instr_csr_i      : fetch1_instr_csr_i);
+wire       issue_a_v_alu_w    = (slot0_valid_r ? fetch0_instr_v_alu_i    : fetch1_instr_v_alu_i); // new
 wire       issue_a_invalid_w  = (slot0_valid_r ? fetch0_instr_invalid_i  : fetch1_instr_invalid_i);
 
 
 wire [4:0] issue_b_ra_idx_w   = opcode_b_r[19:15];
 wire [4:0] issue_b_rb_idx_w   = opcode_b_r[24:20];
 wire [4:0] issue_b_rd_idx_w   = opcode_b_r[11:7];
+wire [4:0] issue_b_va_idx_w   = opcode_b_r[19:15]; // new
+wire [4:0] issue_b_vb_idx_w   = opcode_b_r[24:20]; // new
+wire [4:0] issue_b_vd_idx_w   = opcode_b_r[11:7]; // new
+wire       issue_b_vmask_idx_w = 5'b0; // new
+wire       issue_b_vmask_w    = opcode_b_r[25]; // new
+// EMO - after checking ra,rb add here if needed for issue b
 wire       issue_b_sb_alloc_w = fetch1_instr_rd_valid_i;
+wire       issue_b_v_sb_alloc_w = fetch1_instr_vd_valid_i; // new
 wire       issue_b_exec_w     = fetch1_instr_exec_i;
 wire       issue_b_lsu_w      = fetch1_instr_lsu_i;
 wire       issue_b_branch_w   = fetch1_instr_branch_i;
 wire       issue_b_mul_w      = fetch1_instr_mul_i;
 wire       issue_b_div_w      = fetch1_instr_div_i;
 wire       issue_b_csr_w      = fetch1_instr_csr_i;
+wire       issue_b_v_alu_w    = fetch1_instr_v_alu_i; // new
 wire       issue_b_invalid_w  = fetch1_instr_invalid_i;
 
 //-------------------------------------------------------------
@@ -344,21 +394,37 @@ wire        pipe0_store_e1_w;
 wire        pipe0_mul_e1_w;
 wire        pipe0_branch_e1_w;
 wire [4:0]  pipe0_rd_e1_w;
+wire        pipe0_v_alu_e1_w; // new
+wire [4:0]  pipe0_vd_e1_w; // new
 
 wire [31:0] pipe0_pc_e1_w;
 wire [31:0] pipe0_opcode_e1_w;
 wire [31:0] pipe0_operand_ra_e1_w;
 wire [31:0] pipe0_operand_rb_e1_w;
 
+wire [VLEN-1:0] pipe0_v_alu_operand_va_e1_w; // new
+wire [VLEN-1:0] pipe0_v_alu_operand_vb_e1_w; // new
+wire [VLEN-1:0] pipe0_v_alu_operand_vmask_e1_w; // new
+
 wire        pipe0_load_e2_w;
 wire        pipe0_mul_e2_w;
 wire [4:0]  pipe0_rd_e2_w;
+wire [4:0]  pipe0_vd_e2_w; // new
 wire [31:0] pipe0_result_e2_w;
+
+wire            pipe0_v_alu_e2_w;
+wire [VLEN-1:0] pipe0_v_alu_result_e2_w; // new
+
+wire [VLEN-1:0] pipe0_operand_va_wb_w; // new
+wire [VLEN-1:0] pipe0_operand_vb_wb_w; // new
+wire [VLEN-1:0] pipe0_mask_vm_wb_w; // new
 
 wire        pipe0_valid_wb_w;
 wire        pipe0_csr_wb_w;
 wire [4:0]  pipe0_rd_wb_w;
+wire [4:0]  pipe0_vd_wb_w; // new
 wire [31:0] pipe0_result_wb_w;
+wire [VLEN-1:0] pipe0_v_alu_result_wb_w; // new
 wire [31:0] pipe0_pc_wb_w;
 wire [31:0] pipe0_opc_wb_w;
 wire [31:0] pipe0_ra_val_wb_w;
@@ -372,6 +438,7 @@ biriscv_pipe_ctrl
 #( 
      .SUPPORT_LOAD_BYPASS(SUPPORT_LOAD_BYPASS)
     ,.SUPPORT_MUL_BYPASS(SUPPORT_MUL_BYPASS)
+    ,.VLEN(VLEN) // new
 )
 u_pipe0_ctrl
 (
@@ -387,8 +454,12 @@ u_pipe0_ctrl
     ,.issue_div_i(issue_a_div_w)
     ,.issue_mul_i(issue_a_mul_w)
     ,.issue_branch_i(issue_a_branch_w)
+    ,.issue_v_alu_i(issue_a_v_alu_w) // new
+    ,.issue_v_lsu_i(1'b0) // new
     ,.issue_rd_valid_i(issue_a_sb_alloc_w)
+    ,.issue_vd_valid_i(issue_a_v_sb_alloc_w) // new
     ,.issue_rd_i(issue_a_rd_idx_w)
+    ,.issue_vd_i(issue_a_vd_idx_w) // new
     ,.issue_exception_i(issue_a_fault_w)
     ,.issue_pc_i(opcode0_pc_o)
     ,.issue_opcode_i(opcode0_opcode_o)
@@ -397,6 +468,11 @@ u_pipe0_ctrl
     ,.issue_branch_taken_i(branch_d_exec0_request_i)
     ,.issue_branch_target_i(branch_d_exec0_pc_i)
     ,.take_interrupt_i(take_interrupt_i)
+
+    // Vector register inputs // EMO - Check here, compare with opcode0_ra_operand_o
+    ,.issue_operand_va_i(opcode0_va_operand_o)
+    ,.issue_operand_vb_i(opcode0_vb_operand_o)
+    ,.issue_operand_vmask_i(opcode0_vmask_operand_o)
 
     // Execution stage 1: ALU result
     ,.alu_result_e1_i(writeback_exec0_value_i)
@@ -410,11 +486,18 @@ u_pipe0_ctrl
     ,.store_e1_o(pipe0_store_e1_w)
     ,.mul_e1_o(pipe0_mul_e1_w)
     ,.branch_e1_o(pipe0_branch_e1_w)
+    ,.v_alu_e1_o(pipe0_v_alu_e1_w) // new
+    ,.vd_e1_o(pipe0_vd_e1_w) // new
     ,.rd_e1_o(pipe0_rd_e1_w)
     ,.pc_e1_o(pipe0_pc_e1_w)
     ,.opcode_e1_o(pipe0_opcode_e1_w)
     ,.operand_ra_e1_o(pipe0_operand_ra_e1_w)
     ,.operand_rb_e1_o(pipe0_operand_rb_e1_w)
+
+    // Vector register outputs for stage 1
+    ,.v_alu_operand_va_e1_o(pipe0_v_alu_operand_va_e1_w) // new
+    ,.v_alu_operand_vb_e1_o(pipe0_v_alu_operand_vb_e1_w) // new
+    ,.v_alu_operand_vmask_e1_o(pipe0_v_alu_operand_vmask_e1_w) // new
 
     // Execution stage 2: Other results
     ,.mem_complete_i(writeback_mem_valid_i)
@@ -426,7 +509,11 @@ u_pipe0_ctrl
     ,.load_e2_o(pipe0_load_e2_w)
     ,.mul_e2_o(pipe0_mul_e2_w)
     ,.rd_e2_o(pipe0_rd_e2_w)
+    ,.vd_e2_o(pipe0_vd_e2_w) // new
     ,.result_e2_o(pipe0_result_e2_w)
+
+    ,.v_alu_e2_o(pipe0_v_alu_e2_w)
+    ,.v_alu_result_e2_o(pipe0_v_alu_result_e2_w)
 
     ,.stall_o(pipe0_stall_raw_w)
     ,.squash_e1_e2_o(pipe0_squash_e1_e2_w)
@@ -437,10 +524,16 @@ u_pipe0_ctrl
     ,.div_complete_i(writeback_div_valid_i)
     ,.div_result_i(writeback_div_value_i)
 
+    // V ALU results
+    ,.v_alu_complete_i(writeback_v_alu_valid_i) // new
+    ,.v_alu_result_i(writeback_v_alu_value_i) // new
+
     // Commit
     ,.valid_wb_o(pipe0_valid_wb_w)
     ,.csr_wb_o(pipe0_csr_wb_w)
     ,.rd_wb_o(pipe0_rd_wb_w)
+    ,.vd_wb_o(pipe0_vd_wb_w) // new
+    ,.v_alu_result_wb_o(pipe0_v_alu_result_wb_w) // new
     ,.result_wb_o(pipe0_result_wb_w)
     ,.pc_wb_o(pipe0_pc_wb_w)
     ,.opcode_wb_o(pipe0_opc_wb_w)
@@ -449,7 +542,12 @@ u_pipe0_ctrl
     ,.exception_wb_o(pipe0_exception_wb_w)
     ,.csr_write_wb_o(csr_writeback_write_o)
     ,.csr_waddr_wb_o(csr_writeback_waddr_o)
-    ,.csr_wdata_wb_o(csr_writeback_wdata_o)   
+    ,.csr_wdata_wb_o(csr_writeback_wdata_o)
+
+    // Outputs to V ALU
+    ,.operand_va_wb_o(pipe0_operand_va_wb_w) // new
+    ,.operand_vb_wb_o(pipe0_operand_vb_wb_w) // new
+    ,.mask_vm_wb_o(pipe0_mask_vm_wb_w) // new   
 );
 
 assign exec0_hold_o = stall_w;
@@ -467,20 +565,36 @@ wire        pipe1_store_e1_w;
 wire        pipe1_mul_e1_w;
 wire        pipe1_branch_e1_w;
 wire [4:0]  pipe1_rd_e1_w;
+wire        pipe1_v_alu_e1_w; // new
+wire [4:0]  pipe1_vd_e1_w; // new
 
 wire [31:0] pipe1_pc_e1_w;
 wire [31:0] pipe1_opcode_e1_w;
 wire [31:0] pipe1_operand_ra_e1_w;
 wire [31:0] pipe1_operand_rb_e1_w;
 
+wire [VLEN-1:0] pipe1_v_alu_operand_va_e1_w; // new
+wire [VLEN-1:0] pipe1_v_alu_operand_vb_e1_w; // new
+wire [VLEN-1:0] pipe1_v_alu_operand_vmask_e1_w; // new
+
 wire        pipe1_load_e2_w;
 wire        pipe1_mul_e2_w;
 wire [4:0]  pipe1_rd_e2_w;
+wire [4:0]  pipe1_vd_e2_w; // new
 wire [31:0] pipe1_result_e2_w;
+
+wire            pipe1_v_alu_e2_w;
+wire [VLEN-1:0] pipe1_v_alu_result_e2_w; // new
+
+wire [VLEN-1:0] pipe1_operand_va_wb_w; // new
+wire [VLEN-1:0] pipe1_operand_vb_wb_w; // new
+wire [VLEN-1:0] pipe1_mask_vm_wb_w; // new
 
 wire        pipe1_valid_wb_w;
 wire [4:0]  pipe1_rd_wb_w;
+wire [4:0]  pipe1_vd_wb_w; // new
 wire [31:0] pipe1_result_wb_w;
+wire [VLEN-1:0] pipe1_v_alu_result_wb_w; // new
 wire [31:0] pipe1_pc_wb_w;
 wire [31:0] pipe1_opc_wb_w;
 wire [31:0] pipe1_ra_val_wb_w;
@@ -494,6 +608,7 @@ biriscv_pipe_ctrl
 #( 
      .SUPPORT_LOAD_BYPASS(SUPPORT_LOAD_BYPASS)
     ,.SUPPORT_MUL_BYPASS(SUPPORT_MUL_BYPASS)
+    ,.VLEN(VLEN) // new
 )
 u_pipe1_ctrl
 (
@@ -509,8 +624,12 @@ u_pipe1_ctrl
     ,.issue_div_i(1'b0)
     ,.issue_mul_i(issue_b_mul_w)
     ,.issue_branch_i(issue_b_branch_w)
+    ,.issue_v_alu_i(issue_b_v_alu_w) // new
+    ,.issue_v_lsu_i(1'b0) // new
     ,.issue_rd_valid_i(issue_b_sb_alloc_w)
+    ,.issue_vd_valid_i(issue_b_v_sb_alloc_w) // new
     ,.issue_rd_i(issue_b_rd_idx_w)
+    ,.issue_vd_i(issue_b_vd_idx_w) // new
     ,.issue_exception_i(issue_b_fault_w)
     ,.issue_pc_i(opcode1_pc_o)
     ,.issue_opcode_i(opcode1_opcode_o)
@@ -519,6 +638,11 @@ u_pipe1_ctrl
     ,.issue_branch_taken_i(branch_d_exec1_request_i)
     ,.issue_branch_target_i(branch_d_exec1_pc_i)
     ,.take_interrupt_i(take_interrupt_i)
+
+    // Vector register inputs // EMO - Check here too, compare with opcode0_ra_operand_o
+    ,.issue_operand_va_i(opcode1_va_operand_o)
+    ,.issue_operand_vb_i(opcode1_vb_operand_o)
+    ,.issue_operand_vmask_i(opcode1_vmask_operand_o)
 
     // Execution stage 1: ALU, CSR result
     ,.alu_result_e1_i(writeback_exec1_value_i)
@@ -532,11 +656,18 @@ u_pipe1_ctrl
     ,.store_e1_o(pipe1_store_e1_w)
     ,.mul_e1_o(pipe1_mul_e1_w)
     ,.branch_e1_o(pipe1_branch_e1_w)
+    ,.v_alu_e1_o(pipe1_v_alu_e1_w) // new
+    ,.vd_e1_o(pipe1_vd_e1_w) // new
     ,.rd_e1_o(pipe1_rd_e1_w)
     ,.pc_e1_o(pipe1_pc_e1_w)
     ,.opcode_e1_o(pipe1_opcode_e1_w)
     ,.operand_ra_e1_o(pipe1_operand_ra_e1_w)
     ,.operand_rb_e1_o(pipe1_operand_rb_e1_w)
+
+    // Vector register outputs for stage 1
+    ,.v_alu_operand_va_e1_o(pipe1_v_alu_operand_va_e1_w) // new
+    ,.v_alu_operand_vb_e1_o(pipe1_v_alu_operand_vb_e1_w) // new
+    ,.v_alu_operand_vmask_e1_o(pipe1_v_alu_operand_vmask_e1_w) // new
 
     // Execution stage 2: Other results
     ,.mem_complete_i(writeback_mem_valid_i)
@@ -548,7 +679,11 @@ u_pipe1_ctrl
     ,.load_e2_o(pipe1_load_e2_w)
     ,.mul_e2_o(pipe1_mul_e2_w)
     ,.rd_e2_o(pipe1_rd_e2_w)
+    ,.vd_e2_o(pipe1_vd_e2_w) // new
     ,.result_e2_o(pipe1_result_e2_w)
+
+    ,.v_alu_e2_o(pipe1_v_alu_e2_w)
+    ,.v_alu_result_e2_o(pipe1_v_alu_result_e2_w)
 
     ,.stall_o(pipe1_stall_raw_w)
     ,.squash_e1_e2_o(pipe1_squash_e1_e2_w)
@@ -559,10 +694,16 @@ u_pipe1_ctrl
     ,.div_complete_i(writeback_div_valid_i)
     ,.div_result_i(writeback_div_value_i)
 
+    // V ALU results
+    ,.v_alu_complete_i(writeback_v_alu_valid_i) // new
+    ,.v_alu_result_i(writeback_v_alu_value_i) // new
+
     // Commit
     ,.valid_wb_o(pipe1_valid_wb_w)
     ,.csr_wb_o()
     ,.rd_wb_o(pipe1_rd_wb_w)
+    ,.vd_wb_o(pipe1_vd_wb_w) // new
+    ,.v_alu_result_wb_o(pipe1_v_alu_result_wb_w) // new
     ,.result_wb_o(pipe1_result_wb_w)
     ,.pc_wb_o(pipe1_pc_wb_w)
     ,.opcode_wb_o(pipe1_opc_wb_w)
@@ -572,6 +713,11 @@ u_pipe1_ctrl
     ,.csr_write_wb_o()
     ,.csr_waddr_wb_o()
     ,.csr_wdata_wb_o()
+
+    // Outputs to V ALU
+    ,.operand_va_wb_o(pipe0_operand_va_wb_w) // new
+    ,.operand_vb_wb_o(pipe0_operand_vb_wb_w) // new
+    ,.mask_vm_wb_o(pipe0_mask_vm_wb_w) // new  
 );
 
 assign exec1_hold_o = stall_w;
@@ -599,6 +745,7 @@ assign branch_info_pc_o           = (pipe1_branch_e1_w & branch_exec1_request_i)
 //-------------------------------------------------------------
 reg div_pending_q;
 reg csr_pending_q;
+reg v_alu_pending_q; // new
 
 // Division operations take 2 - 34 cycles and stall
 // the pipeline (complete out-of-pipe) until completed.
@@ -626,15 +773,28 @@ else if (pipe0_csr_wb_w)
 
 assign squash_w = pipe0_squash_e1_e2_w || pipe1_squash_e1_e2_w;
 
+// Vector operations may also take multiple cycles and should stall the pipeline until completed.
+// new
+always @ (posedge clk_i or posedge rst_i)
+if (rst_i)
+    v_alu_pending_q <= 1'b0;
+else if (pipe0_squash_e1_e2_w || pipe1_squash_e1_e2_w)
+    v_alu_pending_q <= 1'b0;
+else if (v_alu_opcode_valid_o && issue_a_v_alu_w)
+    v_alu_pending_q <= 1'b1;
+else if (writeback_v_alu_valid_i)
+    v_alu_pending_q <= 1'b0;
+
 //-------------------------------------------------------------
 // Issue / scheduling logic
 //-------------------------------------------------------------
 reg [31:0] scoreboard_r;
+reg [31:0] v_scoreboard_r; // new scoreboard for tracking vector registers v0-v31 
 reg        pipe1_mux_lsu_r;
 reg        pipe1_mux_mul_r;
 
 // Check instructions can be issued in the second execution unit
-wire pipe1_ok_w      = issue_b_exec_w | issue_b_branch_w | issue_b_lsu_w | issue_b_mul_w;
+wire pipe1_ok_w      = issue_b_exec_w | issue_b_branch_w | issue_b_lsu_w | issue_b_mul_w | issue_b_v_alu_w; // new, v_alu added
 
 // Is this combination of instructions possible to execute concurrently.
 // This excludes result dependencies which may also block secondary execution.
@@ -653,6 +813,7 @@ begin
     opcode_a_accept_r    = 1'b0;
     opcode_b_accept_r    = 1'b0;
     scoreboard_r         = 32'b0;
+    v_scoreboard_r       = 32'b0; // new
     pipe1_mux_lsu_r      = 1'b0;
     pipe1_mux_mul_r      = 1'b0;
 
@@ -677,6 +838,14 @@ begin
         scoreboard_r[pipe0_rd_e1_w] = 1'b1;
     if (pipe1_load_e1_w || pipe1_mul_e1_w)
         scoreboard_r[pipe1_rd_e1_w] = 1'b1;
+    
+    // new
+    // Execution unit VALU with >=1 cycle
+    if (pipe0_v_alu_e1_w)
+        v_scoreboard_r[pipe0_vd_e1_w] = 1'b1;
+    if (pipe1_v_alu_e1_w)
+        v_scoreboard_r[pipe1_vd_e1_w] = 1'b1;
+
 
     // Do not start multiply, division or CSR operation in the cycle after a load (leaving only ALU operations and branches)
     if ((pipe0_load_e1_w || pipe0_store_e1_w || pipe1_load_e1_w || pipe1_store_e1_w ) && (issue_a_mul_w || issue_a_div_w || issue_a_csr_w))
@@ -686,26 +855,39 @@ begin
     if (lsu_stall_i || stall_w || div_pending_q || csr_pending_q)
         ;
     // Primary slot (lsu, branch, alu, mul, div, csr)
+    // new condition check added for v_scoreboard // EMO - check and condition for issue a
     else if (opcode_a_valid_r &&
         !(scoreboard_r[issue_a_ra_idx_w] || 
           scoreboard_r[issue_a_rb_idx_w] ||
-          scoreboard_r[issue_a_rd_idx_w]))
+          scoreboard_r[issue_a_rd_idx_w]) &&
+        !(v_scoreboard_r[issue_a_va_idx_w] ||
+          v_scoreboard_r[issue_a_vb_idx_w] ||
+          v_scoreboard_r[issue_a_vd_idx_w]))
     begin
         opcode_a_issue_r  = 1'b1;
         opcode_a_accept_r = 1'b1;
 
         if (opcode_a_accept_r && issue_a_sb_alloc_w && (|issue_a_rd_idx_w))
             scoreboard_r[issue_a_rd_idx_w] = 1'b1;
+        
+        //new
+        if (opcode_a_accept_r && issue_a_v_sb_alloc_w && (|issue_a_vd_idx_w))
+            v_scoreboard_r[issue_a_vd_idx_w] = 1'b1;
     end
 
     // Stall - no issues...
     if (lsu_stall_i || stall_w || div_pending_q || csr_pending_q)
         ;
+    
     // Secondary Slot (lsu, branch, alu, mul)
+    // new condition check added for v_scoreboard // EMO - check and condition for issue b
     else if (dual_issue_ok_w && opcode_b_valid_r && opcode_a_accept_r &&
         !(scoreboard_r[issue_b_ra_idx_w] || 
           scoreboard_r[issue_b_rb_idx_w] ||
-          scoreboard_r[issue_b_rd_idx_w]))
+          scoreboard_r[issue_b_rd_idx_w]) &&
+        !(v_scoreboard_r[issue_b_va_idx_w] ||
+          v_scoreboard_r[issue_b_vb_idx_w] ||
+          v_scoreboard_r[issue_b_vd_idx_w]))
     begin
         opcode_b_issue_r  = 1'b1;
         opcode_b_accept_r = 1'b1;
@@ -714,6 +896,10 @@ begin
 
         if (opcode_b_accept_r && issue_b_sb_alloc_w && (|issue_b_rd_idx_w))
             scoreboard_r[issue_b_rd_idx_w] = 1'b1;
+
+        //new
+        if (opcode_b_accept_r && issue_a_v_sb_alloc_w && (|issue_b_vd_idx_w))
+            v_scoreboard_r[issue_b_vd_idx_w] = 1'b1;
     end    
 end
 
@@ -722,6 +908,7 @@ assign exec0_opcode_valid_o = opcode_a_issue_r;
 assign mul_opcode_valid_o   = enable_muldiv_w & (pipe1_mux_mul_r ? opcode_b_issue_r : opcode_a_issue_r);
 assign div_opcode_valid_o   = enable_muldiv_w & (opcode_a_issue_r);
 assign interrupt_inhibit_o  = csr_pending_q || issue_a_csr_w;
+assign v_alu_opcode_valid_o = enable_vector_operations & (opcode_a_issue_r); // new // EMO - Check for opcode from issue a
 
 assign exec1_opcode_valid_o = opcode_b_issue_r;
 
@@ -770,6 +957,46 @@ u_regfile
     .rb1_value_o(issue_b_rb_value_w)    
 );
 
+//new
+//-------------------------------------------------------------
+// Vector Register File
+//------------------------------------------------------------- 
+wire [31:0] issue_a_va_value_w;
+wire [31:0] issue_a_vb_value_w;
+wire [31:0] issue_b_va_value_w;
+wire [31:0] issue_b_vb_value_w;
+
+// Vector Register file
+biriscv_v_regfile
+#(
+     .SUPPORT_REGFILE_XILINX(SUPPORT_REGFILE_XILINX)
+    ,.SUPPORT_DUAL_ISSUE(SUPPORT_DUAL_ISSUE)
+    ,.VLEN(VLEN)
+)
+u_v_regfile
+(
+    .clk_i(clk_i),
+    .rst_i(rst_i),
+
+    // Write ports
+    .rd0_i(pipe0_vd_wb_w),
+    .rd0_value_i(pipe0_v_alu_result_wb_w),
+    .rd1_i(pipe1_vd_wb_w),
+    .rd1_value_i(pipe1_v_alu_result_wb_w),
+
+    // Read ports
+    .ra0_i(issue_a_va_idx_w),
+    .rb0_i(issue_a_vb_idx_w),
+    .ra0_value_o(issue_a_va_value_w),
+    .rb0_value_o(issue_a_vb_value_w),
+
+    .ra1_i(issue_b_va_idx_w),
+    .rb1_i(issue_b_vb_idx_w),
+    .ra1_value_o(issue_b_va_value_w),
+    .rb1_value_o(issue_b_vb_value_w)    
+);
+
+
 //-------------------------------------------------------------
 // Issue Slot 0
 //------------------------------------------------------------- 
@@ -778,16 +1005,25 @@ assign opcode0_pc_o     = opcode_a_pc_r;
 assign opcode0_rd_idx_o = issue_a_rd_idx_w;
 assign opcode0_ra_idx_o = issue_a_ra_idx_w;
 assign opcode0_rb_idx_o = issue_a_rb_idx_w;
-assign opcode0_invalid_o= 1'b0; 
+assign opcode0_invalid_o= 1'b0;
+
+assign opcode0_vd_idx_o = issue_a_vd_idx_w; // new
+assign opcode0_va_idx_o = issue_a_va_idx_w; // new
+assign opcode0_vb_idx_o = issue_a_vb_idx_w; // new
 
 reg [31:0] issue_a_ra_value_r;
 reg [31:0] issue_a_rb_value_r;
+reg [VLEN-1:0] issue_a_va_value_r; // new
+reg [VLEN-1:0] issue_a_vb_value_r; // new
 
 always @ *
 begin
     // NOTE: Newest version of operand takes priority
     issue_a_ra_value_r = issue_a_ra_value_w;
     issue_a_rb_value_r = issue_a_rb_value_w;
+
+    issue_a_va_value_r = issue_a_va_value_w; // new
+    issue_a_vb_value_r = issue_a_vb_value_w; // new
 
     // Bypass - WB
     if (pipe0_rd_wb_w == issue_a_ra_idx_w)
@@ -800,6 +1036,18 @@ begin
     if (pipe1_rd_wb_w == issue_a_rb_idx_w)
         issue_a_rb_value_r = pipe1_result_wb_w;
 
+    // new
+    // Bypass for Vector - WB 
+    if (pipe0_vd_wb_w == issue_a_va_idx_w)
+        issue_a_va_value_r = pipe0_v_alu_result_wb_w;
+    if (pipe0_vd_wb_w == issue_a_vb_idx_w)
+        issue_a_vb_value_r = pipe0_v_alu_result_wb_w;
+
+    if (pipe1_vd_wb_w == issue_a_va_idx_w)
+        issue_a_va_value_r = pipe1_v_alu_result_wb_w;
+    if (pipe1_vd_wb_w == issue_a_vb_idx_w)
+        issue_a_vb_value_r = pipe1_v_alu_result_wb_w;
+
     // Bypass - E2
     if (pipe0_rd_e2_w == issue_a_ra_idx_w)
         issue_a_ra_value_r = pipe0_result_e2_w;
@@ -810,6 +1058,18 @@ begin
         issue_a_ra_value_r = pipe1_result_e2_w;
     if (pipe1_rd_e2_w == issue_a_rb_idx_w)
         issue_a_rb_value_r = pipe1_result_e2_w;
+
+    // new
+    // Bypass for Vector - E2
+    if (pipe0_vd_e2_w == issue_a_va_idx_w)
+        issue_a_va_value_r = pipe0_v_alu_result_e2_w;
+    if (pipe0_vd_e2_w == issue_a_rb_idx_w)
+        issue_a_vb_value_r = pipe0_v_alu_result_e2_w;
+
+    if (pipe1_vd_e2_w == issue_a_ra_idx_w)
+        issue_a_va_value_r = pipe1_v_alu_result_e2_w;
+    if (pipe1_vd_e2_w == issue_a_rb_idx_w)
+        issue_a_vb_value_r = pipe1_v_alu_result_e2_w;
 
     // Bypass - E1
     if (pipe0_rd_e1_w == issue_a_ra_idx_w)
@@ -822,15 +1082,38 @@ begin
     if (pipe1_rd_e1_w == issue_a_rb_idx_w)
         issue_a_rb_value_r = writeback_exec1_value_i;
 
+    // new
+    // EMO - Check here compare with regular registers
+    // Should 1 writeback value is enough or not
+    // Bypass for Vector - E1
+    if (pipe0_vd_e1_w == issue_a_va_idx_w)
+        issue_a_va_value_r = writeback_v_alu_value_i;
+    if (pipe0_vd_e1_w == issue_a_rb_idx_w)
+        issue_a_vb_value_r = writeback_v_alu_value_i;
+
+    if (pipe1_vd_e1_w == issue_a_ra_idx_w)
+        issue_a_va_value_r = writeback_v_alu_value_i;
+    if (pipe1_vd_e1_w == issue_a_rb_idx_w)
+        issue_a_vb_value_r = writeback_v_alu_value_i;
+
     // Reg 0 source
     if (issue_a_ra_idx_w == 5'b0)
         issue_a_ra_value_r = 32'b0;
     if (issue_a_rb_idx_w == 5'b0)
         issue_a_rb_value_r = 32'b0;
+
+    // new
+    // Reg v0 source
+    if (issue_a_va_idx_w == 5'b0)
+        issue_a_va_value_r = 32'b0;
+    if (issue_a_vb_idx_w == 5'b0)
+        issue_a_vb_value_r = 32'b0;
 end
 
 assign opcode0_ra_operand_o = issue_a_ra_value_r;
 assign opcode0_rb_operand_o = issue_a_rb_value_r;
+assign opcode0_va_operand_o = issue_a_va_value_r; // new
+assign opcode0_vb_operand_o = issue_a_vb_value_r; // new
 
 //-------------------------------------------------------------
 // Issue Slot 1
@@ -842,14 +1125,23 @@ assign opcode1_ra_idx_o = issue_b_ra_idx_w;
 assign opcode1_rb_idx_o = issue_b_rb_idx_w;
 assign opcode1_invalid_o= 1'b0;
 
+assign opcode1_vd_idx_o = issue_b_vd_idx_w; // new
+assign opcode1_va_idx_o = issue_b_va_idx_w; // new
+assign opcode1_vb_idx_o = issue_b_vb_idx_w; // new
+
 reg [31:0] issue_b_ra_value_r;
 reg [31:0] issue_b_rb_value_r;
+reg [VLEN-1:0] issue_b_va_value_r; // new
+reg [VLEN-1:0] issue_b_vb_value_r; // new
 
 always @ *
 begin
     // NOTE: Newest version of operand takes priority
     issue_b_ra_value_r = issue_b_ra_value_w;
     issue_b_rb_value_r = issue_b_rb_value_w;
+
+    issue_b_va_value_r = issue_b_va_value_w; // new
+    issue_b_vb_value_r = issue_b_vb_value_w; // new
 
     // Bypass - WB
     if (pipe0_rd_wb_w == issue_b_ra_idx_w)
@@ -862,6 +1154,18 @@ begin
     if (pipe1_rd_wb_w == issue_b_rb_idx_w)
         issue_b_rb_value_r = pipe1_result_wb_w;
 
+    // new
+    // Bypass for Vector - WB 
+    if (pipe0_vd_wb_w == issue_b_va_idx_w)
+        issue_b_va_value_r = pipe0_v_alu_result_wb_w;
+    if (pipe0_vd_wb_w == issue_b_vb_idx_w)
+        issue_b_vb_value_r = pipe0_v_alu_result_wb_w;
+
+    if (pipe1_vd_wb_w == issue_b_va_idx_w)
+        issue_b_va_value_r = pipe1_v_alu_result_wb_w;
+    if (pipe1_vd_wb_w == issue_b_vb_idx_w)
+        issue_b_vb_value_r = pipe1_v_alu_result_wb_w;
+
     // Bypass - E2
     if (pipe0_rd_e2_w == issue_b_ra_idx_w)
         issue_b_ra_value_r = pipe0_result_e2_w;
@@ -872,6 +1176,18 @@ begin
         issue_b_ra_value_r = pipe1_result_e2_w;
     if (pipe1_rd_e2_w == issue_b_rb_idx_w)
         issue_b_rb_value_r = pipe1_result_e2_w;
+
+    // new
+    // Bypass for Vector - E2
+    if (pipe0_vd_e2_w == issue_b_va_idx_w)
+        issue_b_va_value_r = pipe0_v_alu_result_e2_w;
+    if (pipe0_vd_e2_w == issue_b_rb_idx_w)
+        issue_b_vb_value_r = pipe0_v_alu_result_e2_w;
+
+    if (pipe1_vd_e2_w == issue_b_ra_idx_w)
+        issue_b_va_value_r = pipe1_v_alu_result_e2_w;
+    if (pipe1_vd_e2_w == issue_b_rb_idx_w)
+        issue_b_vb_value_r = pipe1_v_alu_result_e2_w;
 
     // Bypass - E1
     if (pipe0_rd_e1_w == issue_b_ra_idx_w)
@@ -884,15 +1200,38 @@ begin
     if (pipe1_rd_e1_w == issue_b_rb_idx_w)
         issue_b_rb_value_r = writeback_exec1_value_i;
 
+    // new
+    // EMO - Check here compare with regular registers
+    // Should 1 writeback value is enough or not
+    // Bypass for Vector - E1
+    if (pipe0_vd_e1_w == issue_b_va_idx_w)
+        issue_b_va_value_r = writeback_v_alu_value_i;
+    if (pipe0_vd_e1_w == issue_b_rb_idx_w)
+        issue_b_vb_value_r = writeback_v_alu_value_i;
+
+    if (pipe1_vd_e1_w == issue_b_ra_idx_w)
+        issue_b_va_value_r = writeback_v_alu_value_i;
+    if (pipe1_vd_e1_w == issue_b_rb_idx_w)
+        issue_b_vb_value_r = writeback_v_alu_value_i;
+
     // Reg 0 source
     if (issue_b_ra_idx_w == 5'b0)
         issue_b_ra_value_r = 32'b0;
     if (issue_b_rb_idx_w == 5'b0)
         issue_b_rb_value_r = 32'b0;
+
+    // new
+    // Reg v0 source
+    if (issue_b_va_idx_w == 5'b0)
+        issue_b_va_value_r = 32'b0;
+    if (issue_b_vb_idx_w == 5'b0)
+        issue_b_vb_value_r = 32'b0;
 end
 
 assign opcode1_ra_operand_o = issue_b_ra_value_r;
 assign opcode1_rb_operand_o = issue_b_rb_value_r;
+assign opcode1_va_operand_o = issue_b_va_value_r; // new
+assign opcode1_vb_operand_o = issue_b_vb_value_r; // new
 
 //-------------------------------------------------------------
 // Load store unit
@@ -930,6 +1269,23 @@ assign csr_opcode_rb_idx_o      = opcode0_rb_idx_o;
 assign csr_opcode_ra_operand_o  = opcode0_ra_operand_o;
 assign csr_opcode_rb_operand_o  = opcode0_rb_operand_o;
 assign csr_opcode_invalid_o     = opcode_a_issue_r && issue_a_invalid_w;
+
+// new
+//-------------------------------------------------------------
+// Vector ALU (VALU) unit
+//-------------------------------------------------------------
+assign v_alu_opcode_valid_o     = opcode_a_issue_r & ~take_interrupt_i;
+assign v_alu_opcode_opcode_o    = opcode0_opcode_o;
+assign v_alu_opcode_pc_o        = opcode0_pc_o;
+assign v_alu_opcode_vd_idx_o    = opcode0_vd_idx_o;
+assign v_alu_opcode_va_idx_o    = opcode0_va_idx_o;
+assign v_alu_opcode_vb_idx_o    = opcode0_vb_idx_o;
+assign v_alu_opcode_ra_idx_o    = opcode0_ra_idx_o;
+assign v_alu_opcode_rb_idx_o    = opcode0_rb_idx_o;
+assign v_alu_opcode_va_operand_o= opcode0_va_operand_o;
+assign v_alu_opcode_vb_operand_o= opcode0_vb_operand_o;
+assign v_alu_opcode_vmask_operand_o= opcode0_vmask_operand_o;
+assign v_alu_opcode_invalid_o    = opcode_a_issue_r && issue_a_invalid_w;
 
 //-------------------------------------------------------------
 // Checker Interface
