@@ -288,6 +288,8 @@ wire  [  4:0]  v_alu_opcode_vd_idx_w; //new
 wire  [ VLEN - 1:0]  v_alu_opcode_va_operand_w; //new
 wire  [ VLEN - 1:0]  v_alu_opcode_vb_operand_w; //new
 wire  [ VLEN - 1:0]  v_alu_opcode_vmask_operand_w; //new
+wire  [ 31:0]        v_alu_opcode_ra_operand_w; //new
+wire  [ 31:0]        v_alu_opcode_rb_operand_w; //new
 
 
 
@@ -741,6 +743,8 @@ u_issue
     ,.v_alu_opcode_va_operand_o(v_alu_opcode_va_operand_w) //new
     ,.v_alu_opcode_vb_operand_o(v_alu_opcode_vb_operand_w) //new
     ,.v_alu_opcode_vmask_operand_o(v_alu_opcode_vmask_operand_w) //new
+    ,.v_alu_opcode_ra_operand_o(v_alu_opcode_ra_operand_w) // new
+    ,.v_alu_opcode_rb_operand_o(v_alu_opcode_rb_operand_w) // new
     ,.csr_opcode_opcode_o(csr_opcode_opcode_w)
     ,.csr_opcode_pc_o(csr_opcode_pc_w)
     ,.csr_opcode_invalid_o(csr_opcode_invalid_w)
@@ -847,8 +851,8 @@ u_v_alu_exec
     ,.opcode_rb_idx_i(v_alu_opcode_rb_idx_w)
     ,.opcode_va_idx_i(v_alu_opcode_va_idx_w)
     ,.opcode_vb_idx_i(v_alu_opcode_vb_idx_w)
-    ,.opcode_ra_operand_i()
-    ,.opcode_rb_operand_i()
+    ,.opcode_ra_operand_i(v_alu_opcode_ra_operand_o)
+    ,.opcode_rb_operand_i(v_alu_opcode_rb_operand_o)
     ,.opcode_va_operand_i(v_alu_opcode_va_operand_w)
     ,.opcode_vb_operand_i(v_alu_opcode_vb_operand_w)
     ,.opcode_vmask_operand_i(v_alu_opcode_vmask_operand_w)

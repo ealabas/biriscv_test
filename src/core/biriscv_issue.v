@@ -192,6 +192,8 @@ module biriscv_issue
     ,output [VLEN-1:0] v_alu_opcode_va_operand_o // new
     ,output [VLEN-1:0] v_alu_opcode_vb_operand_o // new
     ,output [VLEN-1:0] v_alu_opcode_vmask_operand_o // new
+    ,output [31:0]   v_alu_opcode_ra_operand_o // new
+    ,output [31:0]   v_alu_opcode_rb_operand_o // new
     ,output [ 31:0]  csr_opcode_opcode_o
     ,output [ 31:0]  csr_opcode_pc_o
     ,output          csr_opcode_invalid_o
@@ -961,10 +963,10 @@ u_regfile
 //-------------------------------------------------------------
 // Vector Register File
 //------------------------------------------------------------- 
-wire [VLEN -1:0] issue_a_va_value_w;
-wire [VLEN -1:0] issue_a_vb_value_w;
-wire [VLEN -1:0] issue_b_va_value_w;
-wire [VLEN -1:0] issue_b_vb_value_w;
+wire [VLEN-1:0] issue_a_va_value_w;
+wire [VLEN-1:0] issue_a_vb_value_w;
+wire [VLEN-1:0] issue_b_va_value_w;
+wire [VLEN-1:0] issue_b_vb_value_w;
 
 // Vector Register file
 biriscv_v_regfile
@@ -1282,6 +1284,8 @@ assign v_alu_opcode_va_idx_o    = opcode0_va_idx_o;
 assign v_alu_opcode_vb_idx_o    = opcode0_vb_idx_o;
 assign v_alu_opcode_ra_idx_o    = opcode0_ra_idx_o;
 assign v_alu_opcode_rb_idx_o    = opcode0_rb_idx_o;
+assign v_alu_opcode_ra_operand_o= opcode0_ra_operand_o; // new
+assign v_alu_opcode_rb_operand_o= opcode0_rb_operand_o; // new
 assign v_alu_opcode_va_operand_o= opcode0_va_operand_o;
 assign v_alu_opcode_vb_operand_o= opcode0_vb_operand_o;
 assign v_alu_opcode_vmask_operand_o= opcode0_vmask_operand_o;
