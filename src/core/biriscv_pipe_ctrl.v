@@ -66,7 +66,7 @@ module biriscv_pipe_ctrl
     // Vector register inputs
     ,input [VLEN-1:0]    issue_operand_va_i // new
     ,input [VLEN-1:0]    issue_operand_vb_i // new
-    ,input               issue_operand_vmask_i // new
+    ,input [VLEN-1:0]    issue_operand_vmask_i // new
 
     // Execution stage 1: ALU result
     ,input [31:0]    alu_result_e1_i
@@ -188,7 +188,7 @@ reg [31:0]              operand_rb_e1_q;
 reg [`EXCEPTION_W-1:0]  exception_e1_q;
 reg [VLEN-1:0]          operand_va_e1_q; //new
 reg [VLEN-1:0]          operand_vb_e1_q; //new
-reg                     mask_vm_e1_q; //new
+reg [VLEN-1:0]           mask_vm_e1_q; //new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -203,7 +203,7 @@ begin
     exception_e1_q  <= `EXCEPTION_W'b0;
     operand_va_e1_q <= `len'b0; // new
     operand_vb_e1_q <= `len'b0; // new
-    mask_vm_e1_q    <= 1'b0; // new
+    mask_vm_e1_q    <= `len'b0; // new
 end
 // Stall - no change in E1 state
 else if (issue_stall_i)
@@ -249,7 +249,7 @@ begin
     exception_e1_q  <= `EXCEPTION_W'b0;
     operand_va_e1_q <= `len'b0; // new
     operand_va_e1_q <= `len'b0; // new
-    mask_vm_e1_q    <= 1'b0; // new
+    mask_vm_e1_q    <= `len'b0; // new
 end
 
 wire   alu_e1_w        = ctrl_e1_q[`PCINFO_ALU];
@@ -287,7 +287,7 @@ reg [31:0]              operand_rb_e2_q;
 reg [`EXCEPTION_W-1:0]  exception_e2_q;
 reg [VLEN-1:0]          operand_va_e2_q; // new
 reg [VLEN-1:0]          operand_vb_e2_q; // new
-reg                     mask_vm_e2_q; // new
+reg [VLEN-1:0]          mask_vm_e2_q; // new
 reg [VLEN-1:0]          v_alu_result_e2_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
@@ -306,7 +306,7 @@ begin
     exception_e2_q  <= `EXCEPTION_W'b0;
     operand_va_e2_q <= `len'b0; // new
     operand_vb_e2_q <= `len'b0; // new
-    mask_vm_e2_q    <= 1'b0; // new
+    mask_vm_e2_q    <= `len'b0; // new
     v_alu_result_e2_q <= `len'b0; // new
 end
 // Stall - no change in E2 state
@@ -328,7 +328,7 @@ begin
     exception_e2_q  <= `EXCEPTION_W'b0;
     operand_va_e2_q <= `len'b0; // new
     operand_vb_e2_q <= `len'b0; // new
-    mask_vm_e2_q    <= 1'b0; // new
+    mask_vm_e2_q    <= `len'b0; // new
     v_alu_result_e2_q <= `len'b0; // new    
 end
 // Normal pipeline advance
@@ -436,7 +436,7 @@ reg [`EXCEPTION_W-1:0]  exception_wb_q;
 reg [VLEN-1:0]          v_alu_result_wb_q; // new
 reg [VLEN-1:0]          operand_va_wb_q; // new
 reg [VLEN-1:0]          operand_vb_wb_q; // new
-reg                     mask_vm_wb_q; // new
+reg [VLEN-1:0]          mask_vm_wb_q; // new
 
 always @ (posedge clk_i or posedge rst_i)
 if (rst_i)
@@ -455,7 +455,7 @@ begin
     v_alu_result_wb_q <= `len'b0; // new
     operand_va_wb_q <= `len'b0; // new
     operand_vb_wb_q <= `len'b0; // new
-    mask_vm_wb_q    <= 1'b0; // new
+    mask_vm_wb_q    <= `len'b0; // new
 end
 // Stall - no change in WB state
 else if (issue_stall_i)
@@ -476,7 +476,7 @@ begin
     v_alu_result_wb_q <= `len'b0; // new
     operand_va_wb_q <= `len'b0; // new
     operand_vb_wb_q <= `len'b0; // new
-    mask_vm_wb_q    <= 1'b0; // new
+    mask_vm_wb_q    <= `len'b0; // new
 end
 else
 begin
