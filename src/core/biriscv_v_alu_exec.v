@@ -35,7 +35,6 @@ module biriscv_v_alu_exec#(
     ,input  [ 31:0]  opcode_opcode_i
     ,input  [ 31:0]  opcode_pc_i
     ,input           opcode_invalid_i
-    ,input  [  4:0]  opcode_rd_idx_i
     ,input  [  4:0]  opcode_vd_idx_i
     ,input  [  4:0]  opcode_ra_idx_i
     ,input  [  4:0]  opcode_rb_idx_i

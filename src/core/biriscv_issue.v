@@ -33,7 +33,7 @@ module biriscv_issue
     ,parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS = 1
     ,parameter SUPPORT_REGFILE_XILINX = 0
-    ,parameter SUPPORT_VECTOR_OPERATIONS = 1 // new
+    ,parameter SUPPORT_VECTOR_EXT = 1 // new
     ,parameter VLEN = 128 // new
 )
 //-----------------------------------------------------------------
@@ -219,7 +219,7 @@ module biriscv_issue
 wire enable_dual_issue_w = SUPPORT_DUAL_ISSUE;
 wire enable_muldiv_w     = SUPPORT_MULDIV;
 wire enable_mul_bypass_w = SUPPORT_MUL_BYPASS;
-wire enable_vector_operations = SUPPORT_VECTOR_OPERATIONS; // new
+wire enable_vector_operations = SUPPORT_VECTOR_EXT; // new
 
 wire stall_w;
 wire squash_w;
