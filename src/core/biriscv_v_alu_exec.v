@@ -46,12 +46,12 @@ module biriscv_v_alu_exec#(
     ,input  [ VLEN - 1:0]  opcode_va_operand_i
     ,input  [ VLEN - 1:0]  opcode_vb_operand_i
     ,input  [ VLEN - 1:0]  opcode_vmask_operand_i
-    ,input           hold_i
 
     // EMO - v_alu_complete signal required 
 
     // Outputs
-    ,output [ 31:0]  writeback_value_o
+    ,output          writeback_valid_o
+    ,output [ VLEN - 1:0]  writeback_value_o
 );
 
 integer i;
@@ -260,6 +260,8 @@ begin
     end         
 end
 
+
+assign writeback_valid_o  = 1'b1;
 assign writeback_value_o  = result_r;
 
 

@@ -83,8 +83,8 @@ module biriscv_pipe_ctrl
     ,output          mul_e1_o
     ,output          branch_e1_o
     ,output          v_alu_e1_o // new
-    ,output          vd_e1_o // new
-    ,output [  4:0]  rd_e1_o
+    ,output [4:0]    vd_e1_o // new
+    ,output [4:0]    rd_e1_o
     ,output [31:0]   pc_e1_o
     ,output [31:0]   opcode_e1_o
     ,output [31:0]   operand_ra_e1_o
@@ -93,7 +93,7 @@ module biriscv_pipe_ctrl
     // Vector register outputs for stage 1
     ,output [VLEN-1:0] v_alu_operand_va_e1_o // new
     ,output [VLEN-1:0] v_alu_operand_vb_e1_o  // new
-    ,output            v_alu_operand_vmask_e1_o // new
+    ,output [VLEN-1:0] v_alu_operand_vmask_e1_o // new
 
     // Execution stage 2: Other results
     ,input           mem_complete_i
@@ -123,7 +123,7 @@ module biriscv_pipe_ctrl
     // Outputs to Vector ALU
     ,output [VLEN-1:0] operand_va_wb_o // new, for debug
     ,output [VLEN-1:0] operand_vb_wb_o // new, for debug
-    ,output            mask_vm_wb_o // new, for debug
+    ,output [VLEN-1:0] mask_vm_wb_o // new, for debug
 
     // Commit
     ,output          valid_wb_o
