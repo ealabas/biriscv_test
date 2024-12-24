@@ -254,12 +254,10 @@ wire  [  4:0]  lsu_opcode_ra_idx_w;
 wire  [ 31:0]  csr_writeback_exception_pc_w;
 wire           fetch1_instr_mul_w;
 wire           mmu_store_fault_w;
-wire           fetch0_instr_lsu_v_w; //new
-wire           fetch0_instr_alu_v_w; //new
-wire           fetch1_instr_lsu_v_w; //new
-wire           fetch1_instr_alu_v_w; //new
-wire           fetch0_instr_vd_valid_w; //new
+wire           fetch0_instr_v_lsu_w; //new
 wire           fetch0_instr_v_alu_w; //new
+wire           fetch0_instr_vd_valid_w; //new
+wire           fetch1_instr_v_lsu_w; //new
 wire           fetch1_instr_vd_valid_w; //new
 wire           fetch1_instr_v_alu_w; //new
 wire           writeback_v_alu_valid_w; //new
@@ -355,8 +353,8 @@ u_frontend
     ,.fetch0_instr_csr_o(fetch0_instr_csr_w)
     ,.fetch0_instr_rd_valid_o(fetch0_instr_rd_valid_w)
     ,.fetch0_instr_invalid_o(fetch0_instr_invalid_w)
-    ,.fetch0_instr_lsu_v_o(fetch0_instr_lsu_v_w) //new
-    ,.fetch0_instr_alu_v_o(fetch0_instr_alu_v_w) //new
+    ,.fetch0_instr_v_lsu_o(fetch0_instr_v_lsu_w) //new
+    ,.fetch0_instr_v_alu_o(fetch0_instr_v_alu_w) //new
     ,.fetch1_valid_o(fetch1_valid_w)
     ,.fetch1_instr_o(fetch1_instr_w)
     ,.fetch1_pc_o(fetch1_pc_w)
@@ -370,8 +368,8 @@ u_frontend
     ,.fetch1_instr_csr_o(fetch1_instr_csr_w)
     ,.fetch1_instr_rd_valid_o(fetch1_instr_rd_valid_w)
     ,.fetch1_instr_invalid_o(fetch1_instr_invalid_w)
-    ,.fetch1_instr_lsu_v_o(fetch1_instr_lsu_v_w) //new
-    ,.fetch1_instr_alu_v_o(fetch1_instr_alu_v_w) //new
+    ,.fetch1_instr_v_lsu_o(fetch1_instr_v_lsu_w) //new
+    ,.fetch1_instr_v_alu_o(fetch1_instr_v_alu_w) //new
 );
 
 
