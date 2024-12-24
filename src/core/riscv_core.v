@@ -36,7 +36,7 @@ module riscv_core
     ,parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS = 1
     ,parameter SUPPORT_REGFILE_XILINX = 0
-    ,parameter SUPPORT_VECTOR_EXT = 1
+    ,parameter SUPPORT_VECTOR_EXT = 1 //new
     ,parameter EXTRA_DECODE_STAGE = 0
     ,parameter MEM_CACHE_ADDR_MIN = 32'h80000000
     ,parameter MEM_CACHE_ADDR_MAX = 32'h8fffffff
@@ -49,6 +49,8 @@ module riscv_core
     ,parameter BHT_ENABLE       = 1
     ,parameter NUM_RAS_ENTRIES  = 8
     ,parameter NUM_RAS_ENTRIES_W = 3
+    ,parameter VLEN = 128 //new
+    ,parameter ELEN = 32 //new
 )
 //-----------------------------------------------------------------
 // Ports
@@ -252,8 +254,42 @@ wire  [  4:0]  lsu_opcode_ra_idx_w;
 wire  [ 31:0]  csr_writeback_exception_pc_w;
 wire           fetch1_instr_mul_w;
 wire           mmu_store_fault_w;
-wire           fetch1_instr_lsu_v_w;
-wire           fetch0_instr_lsu_v_w;
+wire           fetch0_instr_lsu_v_w; //new
+wire           fetch0_instr_alu_v_w; //new
+wire           fetch1_instr_lsu_v_w; //new
+wire           fetch1_instr_alu_v_w; //new
+wire           fetch0_instr_vd_valid_w; //new
+wire           fetch0_instr_v_alu_w; //new
+wire           fetch1_instr_vd_valid_w; //new
+wire           fetch1_instr_v_alu_w; //new
+wire           writeback_v_alu_valid_w; //new
+wire  [ VLEN - 1:0]  writeback_v_alu_value_w; //new
+wire           v_alu_opcode_valid_w; //new
+wire  [  4:0]  opcode0_vd_idx_w; //new
+wire  [  4:0]  opcode0_va_idx_w; //new
+wire  [  4:0]  opcode0_vb_idx_w; //new
+wire  [ VLEN - 1:0]  opcode0_va_operand_w; //new
+wire  [ VLEN - 1:0]  opcode0_vb_operand_w; //new
+wire  [ VLEN - 1:0]  opcode0_vmask_operand_w; //new
+wire  [  4:0]  opcode1_vd_idx_w; //new
+wire  [  4:0]  opcode1_va_idx_w; //new
+wire  [  4:0]  opcode1_vb_idx_w; //new
+wire  [ VLEN - 1:0]  opcode1_va_operand_w; //new
+wire  [ VLEN - 1:0]  opcode1_vb_operand_w; //new
+wire  [ VLEN - 1:0]  opcode1_vmask_operand_w; //new
+wire  [ 31:0]  v_alu_opcode_opcode_w; //new
+wire  [ 31:0]  v_alu_opcode_pc_w; //new
+wire           v_alu_opcode_invalid_w; //new
+wire  [  4:0]  v_alu_opcode_ra_idx_w; //new
+wire  [  4:0]  v_alu_opcode_rb_idx_w; //new
+wire  [  4:0]  v_alu_opcode_va_idx_w; //new
+wire  [  4:0]  v_alu_opcode_vb_idx_w; //new
+wire  [  4:0]  v_alu_opcode_vd_idx_w; //new
+wire  [ VLEN - 1:0]  v_alu_opcode_va_operand_w; //new
+wire  [ VLEN - 1:0]  v_alu_opcode_vb_operand_w; //new
+wire  [ VLEN - 1:0]  v_alu_opcode_vmask_operand_w; //new
+
+
 
 
 biriscv_frontend
@@ -317,7 +353,8 @@ u_frontend
     ,.fetch0_instr_csr_o(fetch0_instr_csr_w)
     ,.fetch0_instr_rd_valid_o(fetch0_instr_rd_valid_w)
     ,.fetch0_instr_invalid_o(fetch0_instr_invalid_w)
-    ,.fetch0_instr_lsu_v_o(fetch0_instr_lsu_v_w)
+    ,.fetch0_instr_lsu_v_o(fetch0_instr_lsu_v_w) //new
+    ,.fetch0_instr_alu_v_o(fetch0_instr_alu_v_w) //new
     ,.fetch1_valid_o(fetch1_valid_w)
     ,.fetch1_instr_o(fetch1_instr_w)
     ,.fetch1_pc_o(fetch1_pc_w)
@@ -331,7 +368,8 @@ u_frontend
     ,.fetch1_instr_csr_o(fetch1_instr_csr_w)
     ,.fetch1_instr_rd_valid_o(fetch1_instr_rd_valid_w)
     ,.fetch1_instr_invalid_o(fetch1_instr_invalid_w)
-    ,.fetch1_instr_lsu_v_o(fetch1_instr_lsu_v_w)
+    ,.fetch1_instr_lsu_v_o(fetch1_instr_lsu_v_w) //new
+    ,.fetch1_instr_alu_v_o(fetch1_instr_alu_v_w) //new
 );
 
 
@@ -546,7 +584,9 @@ biriscv_issue
     ,.SUPPORT_LOAD_BYPASS(SUPPORT_LOAD_BYPASS)
     ,.SUPPORT_MULDIV(SUPPORT_MULDIV)
     ,.SUPPORT_MUL_BYPASS(SUPPORT_MUL_BYPASS)
+    ,.SUPPORT_VECTOR_EXT(SUPPORT_VECTOR_EXT)
     ,.SUPPORT_DUAL_ISSUE(SUPPORT_DUAL_ISSUE)
+    ,.VLEN(VLEN)
 )
 u_issue
 (
@@ -565,6 +605,8 @@ u_issue
     ,.fetch0_instr_div_i(fetch0_instr_div_w)
     ,.fetch0_instr_csr_i(fetch0_instr_csr_w)
     ,.fetch0_instr_rd_valid_i(fetch0_instr_rd_valid_w)
+    ,.fetch0_instr_vd_valid_i(fetch0_instr_vd_valid_w) //new
+    ,.fetch0_instr_v_alu_i(fetch0_instr_v_alu_w) //new
     ,.fetch0_instr_invalid_i(fetch0_instr_invalid_w)
     ,.fetch1_valid_i(fetch1_valid_w)
     ,.fetch1_instr_i(fetch1_instr_w)
@@ -578,6 +620,8 @@ u_issue
     ,.fetch1_instr_div_i(fetch1_instr_div_w)
     ,.fetch1_instr_csr_i(fetch1_instr_csr_w)
     ,.fetch1_instr_rd_valid_i(fetch1_instr_rd_valid_w)
+    ,.fetch1_instr_vd_valid_i(fetch1_instr_vd_valid_w) //new
+    ,.fetch1_instr_v_alu_i(fetch1_instr_v_alu_w) //new
     ,.fetch1_instr_invalid_i(fetch1_instr_invalid_w)
     ,.branch_exec0_request_i(branch_exec0_request_w)
     ,.branch_exec0_is_taken_i(branch_exec0_is_taken_w)
@@ -612,6 +656,8 @@ u_issue
     ,.writeback_mul_value_i(writeback_mul_value_w)
     ,.writeback_div_valid_i(writeback_div_valid_w)
     ,.writeback_div_value_i(writeback_div_value_w)
+    ,.writeback_v_alu_valid_i(writeback_v_alu_valid_w) //new
+    ,.writeback_v_alu_value_i(writeback_v_alu_value_w) //new
     ,.csr_result_e1_value_i(csr_result_e1_value_w)
     ,.csr_result_e1_write_i(csr_result_e1_write_w)
     ,.csr_result_e1_wdata_i(csr_result_e1_wdata_w)
@@ -639,22 +685,35 @@ u_issue
     ,.csr_opcode_valid_o(csr_opcode_valid_w)
     ,.mul_opcode_valid_o(mul_opcode_valid_w)
     ,.div_opcode_valid_o(div_opcode_valid_w)
+    ,.v_alu_opcode_valid_o(v_alu_opcode_valid_w) //new
     ,.opcode0_opcode_o(opcode0_opcode_w)
     ,.opcode0_pc_o(opcode0_pc_w)
     ,.opcode0_invalid_o(opcode0_invalid_w)
     ,.opcode0_rd_idx_o(opcode0_rd_idx_w)
     ,.opcode0_ra_idx_o(opcode0_ra_idx_w)
     ,.opcode0_rb_idx_o(opcode0_rb_idx_w)
+    ,.opcode0_vd_idx_o(opcode0_vd_idx_w) //new
+    ,.opcode0_va_idx_o(opcode0_va_idx_w) //new
+    ,.opcode0_vb_idx_o(opcode0_vb_idx_w) //new
     ,.opcode0_ra_operand_o(opcode0_ra_operand_w)
     ,.opcode0_rb_operand_o(opcode0_rb_operand_w)
+    ,.opcode0_va_operand_o(opcode0_va_operand_w) //new
+    ,.opcode0_vb_operand_o(opcode0_vb_operand_w) //new
+    ,.opcode0_vmask_operand_o(opcode0_vmask_operand_w) //new
     ,.opcode1_opcode_o(opcode1_opcode_w)
     ,.opcode1_pc_o(opcode1_pc_w)
     ,.opcode1_invalid_o(opcode1_invalid_w)
     ,.opcode1_rd_idx_o(opcode1_rd_idx_w)
     ,.opcode1_ra_idx_o(opcode1_ra_idx_w)
     ,.opcode1_rb_idx_o(opcode1_rb_idx_w)
+    ,.opcode1_vd_idx_o(opcode1_vd_idx_w) //new
+    ,.opcode1_va_idx_o(opcode1_va_idx_w) //new
+    ,.opcode1_vb_idx_o(opcode1_vb_idx_w) //new
     ,.opcode1_ra_operand_o(opcode1_ra_operand_w)
     ,.opcode1_rb_operand_o(opcode1_rb_operand_w)
+    ,.opcode1_va_operand_o(opcode1_va_operand_w) //new
+    ,.opcode1_vb_operand_o(opcode1_vb_operand_w) //new
+    ,.opcode1_vmask_operand_o(opcode1_vmask_operand_w) //new
     ,.lsu_opcode_opcode_o(lsu_opcode_opcode_w)
     ,.lsu_opcode_pc_o(lsu_opcode_pc_w)
     ,.lsu_opcode_invalid_o(lsu_opcode_invalid_w)
@@ -671,6 +730,17 @@ u_issue
     ,.mul_opcode_rb_idx_o(mul_opcode_rb_idx_w)
     ,.mul_opcode_ra_operand_o(mul_opcode_ra_operand_w)
     ,.mul_opcode_rb_operand_o(mul_opcode_rb_operand_w)
+    ,.v_alu_opcode_opcode_o(v_alu_opcode_opcode_w) //new
+    ,.v_alu_opcode_pc_o(v_alu_opcode_pc_w) //new
+    ,.v_alu_opcode_invalid_o(v_alu_opcode_invalid_w) //new
+    ,.v_alu_opcode_ra_idx_o(v_alu_opcode_ra_idx_w) //new
+    ,.v_alu_opcode_rb_idx_o(v_alu_opcode_rb_idx_w) //new
+    ,.v_alu_opcode_va_idx_o(v_alu_opcode_va_idx_w) //new
+    ,.v_alu_opcode_vb_idx_o(v_alu_opcode_vb_idx_w) //new
+    ,.v_alu_opcode_vd_idx_o(v_alu_opcode_vd_idx_w) //new
+    ,.v_alu_opcode_va_operand_o(v_alu_opcode_va_operand_w) //new
+    ,.v_alu_opcode_vb_operand_o(v_alu_opcode_vb_operand_w) //new
+    ,.v_alu_opcode_vmask_operand_o(v_alu_opcode_vmask_operand_w) //new
     ,.csr_opcode_opcode_o(csr_opcode_opcode_w)
     ,.csr_opcode_pc_o(csr_opcode_pc_w)
     ,.csr_opcode_invalid_o(csr_opcode_invalid_w)
@@ -755,6 +825,37 @@ u_exec1
     ,.branch_d_pc_o(branch_d_exec1_pc_w)
     ,.branch_d_priv_o(branch_d_exec1_priv_w)
     ,.writeback_value_o(writeback_exec1_value_w)
+);
+
+//new module
+biriscv_v_alu_exec
+#(
+     .VLEN(VLEN)
+     ,.ELEN(ELEN)
+)
+u_v_alu_exec
+(
+    // Inputs
+     .clk_i(clk_i)
+    ,.rst_i(rst_i)
+    ,.opcode_valid_i(v_alu_opcode_valid_w)
+    ,.opcode_opcode_i(v_alu_opcode_opcode_w)
+    ,.opcode_pc_i(v_alu_opcode_pc_w)
+    ,.opcode_invalid_i(v_alu_opcode_invalid_w)
+    ,.opcode_vd_idx_i(v_alu_opcode_vd_idx_w)
+    ,.opcode_ra_idx_i(v_alu_opcode_ra_idx_w)
+    ,.opcode_rb_idx_i(v_alu_opcode_rb_idx_w)
+    ,.opcode_va_idx_i(v_alu_opcode_va_idx_w)
+    ,.opcode_vb_idx_i(v_alu_opcode_vb_idx_w)
+    ,.opcode_ra_operand_i()
+    ,.opcode_rb_operand_i()
+    ,.opcode_va_operand_i(v_alu_opcode_va_operand_w)
+    ,.opcode_vb_operand_i(v_alu_opcode_vb_operand_w)
+    ,.opcode_vmask_operand_i(v_alu_opcode_vmask_operand_w)
+
+    // Outputs
+    ,.writeback_valid_o(writeback_v_alu_valid_w)
+    ,.writeback_value_o(writeback_v_alu_value_w)
 );
 
 
