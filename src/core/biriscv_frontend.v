@@ -104,8 +104,8 @@ module biriscv_frontend
     ,output          fetch1_instr_csr_o
     ,output          fetch1_instr_rd_valid_o
     ,output          fetch1_instr_invalid_o
-    ,output          fetch1_instr_lsu_v_o //new
-    ,output          fetch1_instr_alu_v_o //new
+    ,output          fetch1_instr_v_lsu_o //new
+    ,output          fetch1_instr_v_alu_o //new
 );
 
 wire           fetch_valid_w;
