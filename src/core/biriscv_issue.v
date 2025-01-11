@@ -33,7 +33,7 @@ module biriscv_issue
     ,parameter SUPPORT_LOAD_BYPASS = 1
     ,parameter SUPPORT_MUL_BYPASS = 1
     ,parameter SUPPORT_REGFILE_XILINX = 0
-    ,parameter SUPPORT_VECTOR_OPERATIONS = 1 // new
+    ,parameter SUPPORT_VECTOR_EXT = 1 // new
     ,parameter VLEN = 128 // new
 )
 //-----------------------------------------------------------------
@@ -150,7 +150,7 @@ module biriscv_issue
     ,output [ 31:0]  opcode0_rb_operand_o
     ,output [VLEN-1:0]  opcode0_va_operand_o // new
     ,output [VLEN-1:0]  opcode0_vb_operand_o // new
-    ,output          opcode0_vmask_operand_o // new
+    ,output [VLEN-1:0]  opcode0_vmask_operand_o // new
     ,output [ 31:0]  opcode1_opcode_o
     ,output [ 31:0]  opcode1_pc_o
     ,output          opcode1_invalid_o
@@ -164,7 +164,7 @@ module biriscv_issue
     ,output [ 31:0]  opcode1_rb_operand_o
     ,output [VLEN-1:0]  opcode1_va_operand_o // new
     ,output [VLEN-1:0]  opcode1_vb_operand_o // new
-    ,output          opcode1_vmask_operand_o // new
+    ,output [VLEN-1:0]  opcode1_vmask_operand_o // new
     ,output [ 31:0]  lsu_opcode_opcode_o
     ,output [ 31:0]  lsu_opcode_pc_o
     ,output          lsu_opcode_invalid_o
@@ -192,6 +192,8 @@ module biriscv_issue
     ,output [VLEN-1:0] v_alu_opcode_va_operand_o // new
     ,output [VLEN-1:0] v_alu_opcode_vb_operand_o // new
     ,output [VLEN-1:0] v_alu_opcode_vmask_operand_o // new
+    ,output [31:0]   v_alu_opcode_ra_operand_o // new
+    ,output [31:0]   v_alu_opcode_rb_operand_o // new
     ,output [ 31:0]  csr_opcode_opcode_o
     ,output [ 31:0]  csr_opcode_pc_o
     ,output          csr_opcode_invalid_o
@@ -219,7 +221,7 @@ module biriscv_issue
 wire enable_dual_issue_w = SUPPORT_DUAL_ISSUE;
 wire enable_muldiv_w     = SUPPORT_MULDIV;
 wire enable_mul_bypass_w = SUPPORT_MUL_BYPASS;
-wire enable_vector_operations = SUPPORT_VECTOR_OPERATIONS; // new
+wire enable_vector_operations = SUPPORT_VECTOR_EXT; // new
 
 wire stall_w;
 wire squash_w;
@@ -715,9 +717,9 @@ u_pipe1_ctrl
     ,.csr_wdata_wb_o()
 
     // Outputs to V ALU
-    ,.operand_va_wb_o(pipe0_operand_va_wb_w) // new
-    ,.operand_vb_wb_o(pipe0_operand_vb_wb_w) // new
-    ,.mask_vm_wb_o(pipe0_mask_vm_wb_w) // new  
+    ,.operand_va_wb_o(pipe1_operand_va_wb_w) // new
+    ,.operand_vb_wb_o(pipe1_operand_vb_wb_w) // new
+    ,.mask_vm_wb_o(pipe1_mask_vm_wb_w) // new  
 );
 
 assign exec1_hold_o = stall_w;
@@ -961,10 +963,10 @@ u_regfile
 //-------------------------------------------------------------
 // Vector Register File
 //------------------------------------------------------------- 
-wire [31:0] issue_a_va_value_w;
-wire [31:0] issue_a_vb_value_w;
-wire [31:0] issue_b_va_value_w;
-wire [31:0] issue_b_vb_value_w;
+wire [VLEN-1:0] issue_a_va_value_w;
+wire [VLEN-1:0] issue_a_vb_value_w;
+wire [VLEN-1:0] issue_b_va_value_w;
+wire [VLEN-1:0] issue_b_vb_value_w;
 
 // Vector Register file
 biriscv_v_regfile
@@ -1114,6 +1116,7 @@ assign opcode0_ra_operand_o = issue_a_ra_value_r;
 assign opcode0_rb_operand_o = issue_a_rb_value_r;
 assign opcode0_va_operand_o = issue_a_va_value_r; // new
 assign opcode0_vb_operand_o = issue_a_vb_value_r; // new
+assign opcode0_vmask_operand_o = 128'b0;
 
 //-------------------------------------------------------------
 // Issue Slot 1
@@ -1282,6 +1285,8 @@ assign v_alu_opcode_va_idx_o    = opcode0_va_idx_o;
 assign v_alu_opcode_vb_idx_o    = opcode0_vb_idx_o;
 assign v_alu_opcode_ra_idx_o    = opcode0_ra_idx_o;
 assign v_alu_opcode_rb_idx_o    = opcode0_rb_idx_o;
+assign v_alu_opcode_ra_operand_o= opcode0_ra_operand_o; // new
+assign v_alu_opcode_rb_operand_o= opcode0_rb_operand_o; // new
 assign v_alu_opcode_va_operand_o= opcode0_va_operand_o;
 assign v_alu_opcode_vb_operand_o= opcode0_vb_operand_o;
 assign v_alu_opcode_vmask_operand_o= opcode0_vmask_operand_o;

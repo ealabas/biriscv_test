@@ -24,7 +24,8 @@
 //-----------------------------------------------------------------
 
 module biriscv_v_alu_exec#(
-    parameter VLEN = 128;
+    parameter VLEN = 128
+    ,parameter ELEN = 32
 )
 (
     // Inputs
@@ -34,7 +35,6 @@ module biriscv_v_alu_exec#(
     ,input  [ 31:0]  opcode_opcode_i
     ,input  [ 31:0]  opcode_pc_i
     ,input           opcode_invalid_i
-    ,input  [  4:0]  opcode_rd_idx_i
     ,input  [  4:0]  opcode_vd_idx_i
     ,input  [  4:0]  opcode_ra_idx_i
     ,input  [  4:0]  opcode_rb_idx_i
@@ -45,14 +45,15 @@ module biriscv_v_alu_exec#(
     ,input  [ VLEN - 1:0]  opcode_va_operand_i
     ,input  [ VLEN - 1:0]  opcode_vb_operand_i
     ,input  [ VLEN - 1:0]  opcode_vmask_operand_i
-    ,input           hold_i
 
     // EMO - v_alu_complete signal required 
 
     // Outputs
-    ,output [ 31:0]  writeback_value_o
+    ,output          writeback_valid_o
+    ,output [ VLEN - 1:0]  writeback_value_o
 );
 
+integer i;
 
 
 //-----------------------------------------------------------------
@@ -150,7 +151,7 @@ begin
         end
         else begin
             for (i = 0; i < VLEN / ELEN; i = i + 1) begin
-                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - register_operand_r[ELEN - 1 : 0]; : {ELEN{1'b0}};
+                result_r[(i+1)*ELEN-1 -: ELEN] = opcode_vmask_operand_i[i * ELEN] ? opcode_va_operand_i[(i+1)*ELEN-1 -: ELEN] - register_operand_r[ELEN - 1 : 0] : {ELEN{1'b0}};
             end
         end
     end
@@ -259,49 +260,8 @@ begin
 end
 
 
-// Pipeline flops for multiplier
-always @(posedge clk_i or posedge rst_i)
-if (rst_i)
-begin
-    operand_a_e1_q <= 33'b0;
-    operand_b_e1_q <= 33'b0;
-    mulhi_sel_e1_q <= 1'b0;
-end
-else if (hold_i)
-    ;
-else if (opcode_valid_i && mult_inst_w)
-begin
-    operand_a_e1_q <= operand_a_r;
-    operand_b_e1_q <= operand_b_r;
-    mulhi_sel_e1_q <= ~((opcode_opcode_i & `INST_MUL_MASK) == `INST_MUL);
-end
-else
-begin
-    operand_a_e1_q <= 33'b0;
-    operand_b_e1_q <= 33'b0;
-    mulhi_sel_e1_q <= 1'b0;
-end
-
-assign mult_result_w = {{ 32 {operand_a_e1_q[32]}}, operand_a_e1_q}*{{ 32 {operand_b_e1_q[32]}}, operand_b_e1_q};
-
-always @ *
-begin
-    result_r = mulhi_sel_e1_q ? mult_result_w[63:32] : mult_result_w[31:0];
-end
-
-always @(posedge clk_i or posedge rst_i)
-if (rst_i)
-    result_e2_q <= 32'b0;
-else if (~hold_i)
-    result_e2_q <= result_r;
-
-always @(posedge clk_i or posedge rst_i)
-if (rst_i)
-    result_e3_q <= 32'b0;
-else if (~hold_i)
-    result_e3_q <= result_e2_q;
-
-assign writeback_value_o  = (MULT_STAGES == 3) ? result_e3_q : result_e2_q;
+assign writeback_valid_o  = 1'b1;
+assign writeback_value_o  = result_r;
 
 
 endmodule
